@@ -60,7 +60,7 @@ export default function AtRiskTable() {
                     </span>
                   </td>
                   <td className="py-2.5 px-3">
-                    <Link href="/pilgrim-profile" className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors inline-flex">
+                    <Link href={`/pilgrim-profile/${p?.id}`} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors inline-flex">
                       <ExternalLink size={14} />
                     </Link>
                   </td>

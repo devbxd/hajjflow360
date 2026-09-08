@@ -120,7 +120,7 @@ export default function GroupPilgrimTable() {
                   </td>
                   <td className="py-2.5 px-3">
                     <div className="flex items-center gap-1 opacity-0 group-hover:opacity-100">
-                      <Link href="/pilgrim-profile" className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors">
+                      <Link href={`/pilgrim-profile/${p.id}`} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors">
                         <ExternalLink size={13} />
                       </Link>
                       <button className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-[#16A34A] transition-colors">

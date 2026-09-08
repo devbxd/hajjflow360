@@ -1,13 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { pilgrims } from '@/lib/mockData';
+import type { Pilgrim } from '@/lib/mockData';
 import { ChevronDown, ChevronUp, User, FileText, Globe, MapPin, CreditCard } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Icon from '@/components/ui/AppIcon';
-
-
-const p = pilgrims[0];
 
 const paymentHistory = [
   { id: 'PAY-001', date: '15/03/2026', amount: 5000, method: 'Bank Transfer', status: 'cleared', ref: 'TXN-882341' },
@@ -56,7 +53,7 @@ function InfoRow({ label, value, mono }: { label: string; value: string; mono?: 
   );
 }
 
-export default function PilgrimInfoPanels() {
+export default function PilgrimInfoPanels({ pilgrim: p }: { pilgrim: Pilgrim }) {
   return (
     <div className="space-y-4">
       {/* Personal Details */}

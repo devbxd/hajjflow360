@@ -1,0 +1,91 @@
+'use client';
+
+import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import AppLogo from '@/components/ui/AppLogo';
+
+export default function LoginPage() {
+  const router = useRouter();
+  const [username, setUsername] = useState('');
+  const [password, setPassword] = useState('');
+  const [error, setError] = useState('');
+  const [loading, setLoading] = useState(false);
+
+  const handleSubmit = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setError('');
+    setLoading(true);
+    try {
+      const res = await fetch('/api/auth/login', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+      if (!res.ok) {
+        setError(data.error || 'Connexion impossible.');
+        setLoading(false);
+        return;
+      }
+      router.replace('/');
+      router.refresh();
+    } catch {
+      setError('Erreur réseau. Réessaie.');
+      setLoading(false);
+    }
+  };
+
+  return (
+    <div className="min-h-screen flex items-center justify-center bg-background px-4">
+      <div className="w-full max-w-sm">
+        <div className="flex flex-col items-center mb-6">
+          <AppLogo size={40} />
+          <h1 className="mt-3 text-lg font-semibold text-foreground">HajjFlow360</h1>
+          <p className="text-sm text-muted-foreground">Connecte-toi pour accéder au tableau de bord</p>
+        </div>
+
+        <form onSubmit={handleSubmit} className="card-base space-y-4">
+          <div>
+            <label htmlFor="username" className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5">
+              Identifiant
+            </label>
+            <input
+              id="username"
+              type="text"
+              autoComplete="username"
+              value={username}
+              onChange={(e) => setUsername(e.target.value)}
+              className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              required
+            />
+          </div>
+
+          <div>
+            <label htmlFor="password" className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5">
+              Mot de passe
+            </label>
+            <input
+              id="password"
+              type="password"
+              autoComplete="current-password"
+              value={password}
+              onChange={(e) => setPassword(e.target.value)}
+              className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              required
+            />
+          </div>
+
+          {error && (
+            <p className="text-sm text-[#DC2626]" role="alert">
+              {error}
+            </p>
+          )}
+
+          <button type="submit" disabled={loading} className="btn-primary w-full justify-center text-sm" style={{ opacity: loading ? 0.7 : 1 }}>
+            {loading ? 'Connexion...' : 'Se connecter'}
+          </button>
+        </form>
+      </div>
+    </div>
+  );
+}

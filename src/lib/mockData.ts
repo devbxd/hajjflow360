@@ -482,10 +482,9 @@ export const campaignStats = {
 export const atRiskPilgrims = [
   { id: 'PIL-005', name: 'Khalid Mansour Al-Otaibi', issue: 'Passport missing + Visa not started', severity: 'critical' as const, daysToDepart: 12 },
   { id: 'PIL-008', name: 'Zainab Bint Abdullah', issue: 'Visa rejected — appeal required', severity: 'critical' as const, daysToDepart: 13 },
-  { id: 'PIL-023', name: 'Hassan Boudiaf', issue: 'Passport expires before return date', severity: 'high' as const, daysToDepart: 12 },
-  { id: 'PIL-047', name: 'Rania Al-Sayed', issue: 'Payment 30% — overdue SAR 10,850', severity: 'high' as const, daysToDepart: 12 },
-  { id: 'PIL-112', name: 'Bilal Osman Farah', issue: 'No bus/room allocation assigned', severity: 'medium' as const, daysToDepart: 12 },
-  { id: 'PIL-198', name: 'Tariq Noor Al-Din', issue: 'Flight not confirmed — seat unassigned', severity: 'medium' as const, daysToDepart: 13 },
+  { id: 'PIL-003', name: 'Mohammad Idris Patel', issue: 'Passport scanned but not verified — visa still processing', severity: 'high' as const, daysToDepart: 12 },
+  { id: 'PIL-006', name: 'Amira Hassan Saleh', issue: 'Payment 50% paid — balance overdue, flight unconfirmed', severity: 'high' as const, daysToDepart: 12 },
+  { id: 'PIL-010', name: 'Maryam Koné', issue: 'No bus/room allocation assigned', severity: 'medium' as const, daysToDepart: 13 },
 ];
 
 export const recentActivity = [

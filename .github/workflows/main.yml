@@ -1,4 +1,4 @@
-name: HajjOps Build & Test
+name: HajjFlow360 Build & Test
 
 on:
   push:

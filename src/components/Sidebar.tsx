@@ -1,8 +1,8 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
-import { usePathname } from 'next/navigation';
+import { usePathname, useRouter } from 'next/navigation';
 import AppLogo from '@/components/ui/AppLogo';
 import { LayoutDashboard, Users, UserCheck, ChevronLeft, ChevronRight, Plane, Building2, Bus, QrCode, Bell, Settings, LogOut, AlertTriangle, ClipboardList, Layers, CreditCard } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
@@ -19,24 +19,48 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Campaign Dashboard', href: '/', icon: LayoutDashboard, group: 'Overview' },
   { label: 'Pilgrim Management', href: '/pilgrim-management', icon: Users, badge: 23, group: 'Pilgrims' },
-  { label: 'Pilgrim Profile', href: '/pilgrim-profile', icon: ClipboardList, group: 'Pilgrims' },
+  { label: 'Pilgrim Profile', href: '/pilgrim-profile/PIL-001', icon: ClipboardList, group: 'Pilgrims' },
   { label: 'Group Leaders', href: '/group-leader-dashboard', icon: UserCheck, group: 'Pilgrims' },
   { label: 'Allocation Management', href: '/allocation-management', icon: Layers, group: 'Logistics' },
-  { label: 'Flight Manifests', href: '/allocation-management', icon: Plane, group: 'Logistics' },
-  { label: 'Hotel Allocation', href: '/allocation-management', icon: Building2, group: 'Logistics' },
-  { label: 'Bus Seating', href: '/allocation-management', icon: Bus, group: 'Logistics' },
+  { label: 'Flight Manifests', href: '/allocation-management?tab=flight', icon: Plane, group: 'Logistics' },
+  { label: 'Hotel Allocation', href: '/allocation-management?tab=hotel', icon: Building2, group: 'Logistics' },
+  { label: 'Bus Seating', href: '/allocation-management?tab=bus', icon: Bus, group: 'Logistics' },
   { label: 'Payments', href: '/payments', icon: CreditCard, badge: 61, group: 'Operations' },
-  { label: 'QR Check-in', href: '/campaign-dashboard', icon: QrCode, group: 'Operations' },
-  { label: 'Emergency Lists', href: '/campaign-dashboard', icon: AlertTriangle, badge: 4, group: 'Operations' },
-  { label: 'Notifications', href: '/campaign-dashboard', icon: Bell, badge: 7, group: 'Operations' },
-  { label: 'Settings', href: '/campaign-dashboard', icon: Settings, group: 'System' },
+  { label: 'QR Check-in', href: '/qr-checkin', icon: QrCode, group: 'Operations' },
+  { label: 'Emergency Lists', href: '/emergency-lists', icon: AlertTriangle, badge: 4, group: 'Operations' },
+  { label: 'Notifications', href: '/notifications', icon: Bell, badge: 7, group: 'Operations' },
+  { label: 'Settings', href: '/settings', icon: Settings, group: 'System' },
 ];
 
 const groups = ['Overview', 'Pilgrims', 'Logistics', 'Operations', 'System'];
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
+  const [displayName, setDisplayName] = useState('...');
   const pathname = usePathname();
+  const router = useRouter();
+
+  useEffect(() => {
+    fetch('/api/auth/me')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => {
+        if (data?.user?.displayName) setDisplayName(data.user.displayName);
+      })
+      .catch(() => {});
+  }, []);
+
+  const handleSignOut = async () => {
+    await fetch('/api/auth/logout', { method: 'POST' });
+    router.replace('/login');
+    router.refresh();
+  };
+
+  const initials = displayName
+    .split(' ')
+    .map((w) => w[0])
+    .join('')
+    .slice(0, 2)
+    .toUpperCase();
 
   return (
     <aside
@@ -49,7 +73,7 @@ export default function Sidebar() {
         <div className="flex items-center gap-2 min-w-0">
           <AppLogo size={32} />
           {!collapsed && (
-            <span className="font-semibold text-sm text-foreground truncate">HajjOps</span>
+            <span className="font-semibold text-sm text-foreground truncate">HajjFlow360</span>
           )}
         </div>
         <button
@@ -91,7 +115,8 @@ export default function Sidebar() {
               <div className="space-y-0.5">
                 {uniqueItems.map((item) => {
                   const Icon = item.icon;
-                  const isActive = pathname === item.href;
+                  const itemPath = item.href.split('?')[0];
+                  const isActive = pathname === itemPath;
                   return (
                     <Link
                       key={`nav-${item.label}`}
@@ -122,16 +147,16 @@ export default function Sidebar() {
       {/* User */}
       <div className={`border-t border-border p-3 flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
         <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
-          <span className="text-xs font-semibold text-primary-foreground">OM</span>
+          <span className="text-xs font-semibold text-primary-foreground">{initials}</span>
         </div>
         {!collapsed && (
           <div className="flex-1 min-w-0">
-            <p className="text-sm font-semibold text-foreground truncate">Omar Mahmoud</p>
-            <p className="text-xs text-muted-foreground truncate">Campaign Manager</p>
+            <p className="text-sm font-semibold text-foreground truncate">{displayName}</p>
+            <p className="text-xs text-muted-foreground truncate">Campaign Staff</p>
           </div>
         )}
         {!collapsed && (
-          <button className="p-1 rounded hover:bg-muted text-muted-foreground" title="Sign out">
+          <button onClick={handleSignOut} className="p-1 rounded hover:bg-muted text-muted-foreground" title="Sign out">
             <LogOut size={14} />
           </button>
         )}

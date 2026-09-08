@@ -1,35 +1,50 @@
 'use client';
 
-import React, { useState } from 'react';
+import React from 'react';
 import { Download, CreditCard, Search } from 'lucide-react';
 import { campaignStats } from '@/lib/mockData';
+import type { PaymentRow } from '../paymentRows';
 
 interface PaymentHeaderProps {
-  onSearch?: (q: string) => void;
-  onFilter?: (f: string) => void;
+  search: string;
+  filterStatus: string;
+  onSearchChange: (q: string) => void;
+  onFilterChange: (f: string) => void;
+  exportRows: PaymentRow[];
 }
 
-export default function PaymentHeader({ onSearch, onFilter }: PaymentHeaderProps) {
-  const [search, setSearch] = useState('');
-  const [filter, setFilter] = useState('all');
+const STATUS_LABEL: Record<PaymentRow['paymentStatus'], string> = {
+  paid: 'Paid',
+  partial: 'Partial',
+  overdue: 'Overdue',
+  pending: 'Pending',
+};
 
+export default function PaymentHeader({ search, filterStatus, onSearchChange, onFilterChange, exportRows }: PaymentHeaderProps) {
   const collectionRate = Math.round((campaignStats.collectedRevenue / campaignStats.totalRevenue) * 100);
 
   const handleExport = () => {
+    if (exportRows.length === 0) {
+      return;
+    }
     const csvRows = [
       ['Pilgrim ID', 'Name', 'Total (SAR)', 'Paid (SAR)', 'Balance (SAR)', 'Status', 'Group Leader'],
-      ['PIL-001', 'Ahmad Yusuf Al-Rashidi', '18500', '18500', '0', 'Paid', 'Sheikh Ahmed Al-Rashidi'],
-      ['PIL-002', 'Fatima Zahra Benali', '16800', '16800', '0', 'Paid', 'Sheikh Ahmed Al-Rashidi'],
-      ['PIL-003', 'Mohammad Idris Patel', '14200', '9940', '4260', 'Partial', 'Sheikh Tariq Hussain'],
-      ['PIL-005', 'Khalid Mansour Al-Otaibi', '17500', '5250', '12250', 'Overdue', 'Sheikh Faisal Al-Mutairi'],
-      ['PIL-006', 'Amira Hassan Saleh', '15600', '7800', '7800', 'Partial', 'Sheikh Ahmed Al-Rashidi'],
+      ...exportRows.map((r) => [
+        r.id,
+        r.name,
+        String(r.paymentTotal),
+        String(r.paymentPaid),
+        String(r.balance),
+        STATUS_LABEL[r.paymentStatus],
+        r.groupLeader,
+      ]),
     ];
-    const csv = csvRows.map((r) => r.join(',')).join('\n');
+    const csv = csvRows.map((r) => r.map((cell) => `"${cell.replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'hajj2027_payments.csv';
+    a.download = 'hajjflow360_payments.csv';
     a.click();
     URL.revokeObjectURL(url);
   };
@@ -44,7 +59,7 @@ export default function PaymentHeader({ onSearch, onFilter }: PaymentHeaderProps
           <div>
             <h1 className="text-xl font-semibold text-foreground">Payment Management</h1>
             <p className="text-sm text-muted-foreground">
-              Hajj 2027 · Collection rate{' '}
+              Collection rate{' '}
               <span className="font-semibold text-primary">{collectionRate}%</span> ·{' '}
               SAR {(campaignStats.collectedRevenue / 1_000_000).toFixed(2)}M collected of SAR{' '}
               {(campaignStats.totalRevenue / 1_000_000).toFixed(2)}M total
@@ -58,19 +73,13 @@ export default function PaymentHeader({ onSearch, onFilter }: PaymentHeaderProps
               type="text"
               placeholder="Search pilgrim…"
               value={search}
-              onChange={(e) => {
-                setSearch(e.target.value);
-                onSearch?.(e.target.value);
-              }}
+              onChange={(e) => onSearchChange(e.target.value)}
               className="pl-8 pr-3 py-2 text-sm bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 w-48"
             />
           </div>
           <select
-            value={filter}
-            onChange={(e) => {
-              setFilter(e.target.value);
-              onFilter?.(e.target.value);
-            }}
+            value={filterStatus}
+            onChange={(e) => onFilterChange(e.target.value)}
             className="px-3 py-2 text-sm bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30"
           >
             <option value="all">All Statuses</option>
@@ -79,12 +88,9 @@ export default function PaymentHeader({ onSearch, onFilter }: PaymentHeaderProps
             <option value="overdue">Overdue</option>
             <option value="pending">Pending</option>
           </select>
-          <button
-            onClick={handleExport}
-            className="btn-primary"
-          >
+          <button onClick={handleExport} disabled={exportRows.length === 0} className="btn-primary" style={{ opacity: exportRows.length === 0 ? 0.5 : 1 }}>
             <Download size={14} />
-            Export CSV
+            Export CSV ({exportRows.length})
           </button>
         </div>
       </div>

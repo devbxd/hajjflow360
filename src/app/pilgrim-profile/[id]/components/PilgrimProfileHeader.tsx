@@ -1,11 +1,10 @@
 import React from 'react';
-import { pilgrims } from '@/lib/mockData';
+import type { Pilgrim } from '@/lib/mockData';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { ChevronLeft, Edit2, Printer, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 
-export default function PilgrimProfileHeader() {
-  const p = pilgrims[0]; // Ahmad Yusuf Al-Rashidi
+export default function PilgrimProfileHeader({ pilgrim: p }: { pilgrim: Pilgrim }) {
   const paymentPct = Math.round((p.paymentPaid / p.paymentTotal) * 100);
 
   return (

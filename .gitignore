@@ -1,6 +1,10 @@
 # Node modules
 node_modules/
-package-lock.json
+
+# Environment variables (real secrets — never commit)
+.env
+.env.local
+.env.*.local
 
 # Next.js build output
 .next/

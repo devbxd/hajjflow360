@@ -1,12 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
-import { pilgrims } from '@/lib/mockData';
+import type { Pilgrim } from '@/lib/mockData';
 import { Phone, AlertTriangle, Clock, CheckCircle2, MapPin } from 'lucide-react';
 
-const p = pilgrims?.[0];
-
-export default function PilgrimSidebar() {
+export default function PilgrimSidebar({ pilgrim: p }: { pilgrim: Pilgrim }) {
   const [checkedIn, setCheckedIn] = useState(true);
 
   return (

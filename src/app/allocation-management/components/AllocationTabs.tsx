@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useSearchParams } from 'next/navigation';
 import { Bus, Building2, Plane } from 'lucide-react';
 import dynamic from 'next/dynamic';
 import Icon from '@/components/ui/AppIcon';
@@ -16,8 +17,14 @@ const TABS = [
   { id: 'flight', label: 'Flight Manifests', icon: Plane, count: '6 flights' },
 ];
 
+const VALID_TABS = new Set(['bus', 'hotel', 'flight']);
+
 export default function AllocationTabs() {
-  const [activeTab, setActiveTab] = useState('bus');
+  const searchParams = useSearchParams();
+  const initialTab = searchParams.get('tab');
+  const [activeTab, setActiveTab] = useState(
+    initialTab && VALID_TABS.has(initialTab) ? initialTab : 'bus'
+  );
 
   return (
     <div>

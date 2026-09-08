@@ -1,46 +1,30 @@
 'use client';
 
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect } from 'react';
 import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
-import { pilgrims } from '@/lib/mockData';
 import StatusBadge from '@/components/ui/StatusBadge';
+import { buildPaymentRows, type PaymentRow } from '../paymentRows';
 
 type SortKey = 'name' | 'paymentTotal' | 'paymentPaid' | 'balance' | 'paymentStatus';
 type SortDir = 'asc' | 'desc';
 
-export default function PaymentTable() {
-  const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
+interface PaymentTableProps {
+  search: string;
+  filterStatus: string;
+  onVisibleRowsChange?: (rows: PaymentRow[]) => void;
+}
+
+export default function PaymentTable({ search, filterStatus, onVisibleRowsChange }: PaymentTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('paymentStatus');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 8;
 
-  const tableData = useMemo(() => {
-    // Extend with more mock rows for a realistic table
-    const extended = [
-      ...pilgrims,
-      { id: 'PIL-013', name: 'Hassan Boudiaf', nationality: 'Algeria', groupLeader: 'Sheikh Tariq Hussain', paymentTotal: 15200, paymentPaid: 4560, paymentStatus: 'overdue' as const },
-      { id: 'PIL-014', name: 'Rania Al-Sayed', nationality: 'Egypt', groupLeader: 'Sheikh Ahmed Al-Rashidi', paymentTotal: 15600, paymentPaid: 4680, paymentStatus: 'overdue' as const },
-      { id: 'PIL-015', name: 'Bilal Osman Farah', nationality: 'Somalia', groupLeader: 'Sheikh Ibrahim Musa', paymentTotal: 13800, paymentPaid: 13800, paymentStatus: 'paid' as const },
-      { id: 'PIL-016', name: 'Tariq Noor Al-Din', nationality: 'Jordan', groupLeader: 'Sheikh Faisal Al-Mutairi', paymentTotal: 16400, paymentPaid: 8200, paymentStatus: 'partial' as const },
-      { id: 'PIL-017', name: 'Layla Al-Mansouri', nationality: 'UAE', groupLeader: 'Sheikh Umar Al-Faruq', paymentTotal: 19800, paymentPaid: 19800, paymentStatus: 'paid' as const },
-      { id: 'PIL-018', name: 'Omar Farouq Diallo', nationality: 'Guinea', groupLeader: 'Sheikh Moussa Diallo', paymentTotal: 12400, paymentPaid: 0, paymentStatus: 'pending' as const },
-      { id: 'PIL-019', name: 'Aisha Bint Umar', nationality: 'Malaysia', groupLeader: 'Sheikh Rizal Hakim', paymentTotal: 14600, paymentPaid: 14600, paymentStatus: 'paid' as const },
-      { id: 'PIL-020', name: 'Mustafa Al-Kurdi', nationality: 'Iraq', groupLeader: 'Sheikh Noor Islam', paymentTotal: 13200, paymentPaid: 6600, paymentStatus: 'partial' as const },
-    ];
+  const allRows = useMemo(() => buildPaymentRows(), []);
 
-    let rows = extended.map((p) => ({
-      id: p.id,
-      name: p.name,
-      nationality: p.nationality,
-      groupLeader: p.groupLeader,
-      paymentTotal: p.paymentTotal,
-      paymentPaid: p.paymentPaid,
-      balance: p.paymentTotal - p.paymentPaid,
-      paymentStatus: p.paymentStatus,
-    }));
+  const tableData = useMemo(() => {
+    let rows = allRows;
 
     if (search) {
       const q = search.toLowerCase();
@@ -50,7 +34,7 @@ export default function PaymentTable() {
       rows = rows.filter((r) => r.paymentStatus === filterStatus);
     }
 
-    rows.sort((a, b) => {
+    rows = [...rows].sort((a, b) => {
       let av: string | number = a[sortKey] ?? '';
       let bv: string | number = b[sortKey] ?? '';
       if (typeof av === 'string') av = av.toLowerCase();
@@ -61,9 +45,17 @@ export default function PaymentTable() {
     });
 
     return rows;
-  }, [search, filterStatus, sortKey, sortDir]);
+  }, [allRows, search, filterStatus, sortKey, sortDir]);
 
-  const totalPages = Math.ceil(tableData.length / PAGE_SIZE);
+  useEffect(() => {
+    onVisibleRowsChange?.(tableData);
+  }, [tableData, onVisibleRowsChange]);
+
+  useEffect(() => {
+    setPage(0);
+  }, [search, filterStatus]);
+
+  const totalPages = Math.max(1, Math.ceil(tableData.length / PAGE_SIZE));
   const pageData = tableData.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
 
   const toggleSort = (key: SortKey) => {
@@ -101,31 +93,11 @@ export default function PaymentTable() {
             {tableData.length}
           </span>
         </div>
-        <div className="flex items-center gap-2">
-          {selected.size > 0 && (
-            <span className="text-xs text-primary font-medium bg-primary/10 px-2 py-1 rounded-lg">
-              {selected.size} selected
-            </span>
-          )}
-          <input
-            type="text"
-            placeholder="Search…"
-            value={search}
-            onChange={(e) => { setSearch(e.target.value); setPage(0); }}
-            className="px-3 py-1.5 text-xs bg-muted border border-border rounded-lg focus:outline-none focus:ring-2 focus:ring-primary/30 w-36"
-          />
-          <select
-            value={filterStatus}
-            onChange={(e) => { setFilterStatus(e.target.value); setPage(0); }}
-            className="px-2 py-1.5 text-xs bg-muted border border-border rounded-lg focus:outline-none"
-          >
-            <option value="all">All</option>
-            <option value="paid">Paid</option>
-            <option value="partial">Partial</option>
-            <option value="overdue">Overdue</option>
-            <option value="pending">Pending</option>
-          </select>
-        </div>
+        {selected.size > 0 && (
+          <span className="text-xs text-primary font-medium bg-primary/10 px-2 py-1 rounded-lg">
+            {selected.size} selected
+          </span>
+        )}
       </div>
 
       {/* Table */}
@@ -222,6 +194,13 @@ export default function PaymentTable() {
                 </tr>
               );
             })}
+            {pageData.length === 0 && (
+              <tr>
+                <td colSpan={8} className="px-4 py-8 text-center text-sm text-muted-foreground">
+                  No pilgrims match this search/filter.
+                </td>
+              </tr>
+            )}
           </tbody>
         </table>
       </div>
@@ -229,7 +208,9 @@ export default function PaymentTable() {
       {/* Pagination */}
       <div className="flex items-center justify-between px-4 py-3 border-t border-border">
         <p className="text-xs text-muted-foreground">
-          Showing {page * PAGE_SIZE + 1}–{Math.min((page + 1) * PAGE_SIZE, tableData.length)} of {tableData.length}
+          {tableData.length === 0
+            ? 'Showing 0 of 0'
+            : `Showing ${page * PAGE_SIZE + 1}–${Math.min((page + 1) * PAGE_SIZE, tableData.length)} of ${tableData.length}`}
         </p>
         <div className="flex items-center gap-1">
           <button

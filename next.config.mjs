@@ -1,7 +1,12 @@
+import { fileURLToPath } from 'url';
+import path from 'path';
 import { imageHosts } from './image-hosts.config.mjs';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  outputFileTracingRoot: __dirname,
   productionBrowserSourceMaps: true,
   distDir: process.env.DIST_DIR || '.next',
   typescript: {

@@ -21,7 +21,7 @@ import Link from 'next/link';
 import { toast } from 'sonner';
 
 // Extend mock data to simulate 850 pilgrims (show 12 rows + pagination UI)
-const extendedPilgrims: Pilgrim[] = [
+const seedPilgrims: Pilgrim[] = [
   ...pilgrims,
   {
     id: 'PIL-013', name: 'Tariq Nour Al-Ghamdi', nationality: 'Saudi Arabia', nationalityCode: 'SA',
@@ -66,6 +66,7 @@ const FILTER_TABS = [
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
 export default function PilgrimTable() {
+  const [pilgrimsData, setPilgrimsData] = useState<Pilgrim[]>(seedPilgrims);
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [sortField, setSortField] = useState<SortField>(null);
@@ -76,7 +77,7 @@ export default function PilgrimTable() {
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
 
   const filtered = useMemo(() => {
-    let data = [...extendedPilgrims];
+    let data = [...pilgrimsData];
     if (search) {
       const q = search.toLowerCase();
       data = data.filter(
@@ -105,7 +106,7 @@ export default function PilgrimTable() {
       });
     }
     return data;
-  }, [search, activeFilter, sortField, sortDir]);
+  }, [pilgrimsData, search, activeFilter, sortField, sortDir]);
 
   const totalPages = Math.max(1, Math.ceil(filtered.length / pageSize));
   const paginated = filtered.slice((page - 1) * pageSize, page * pageSize);
@@ -142,12 +143,15 @@ export default function PilgrimTable() {
   };
 
   const handleBulkDelete = () => {
+    // TODO: once the database is connected, call DELETE /api/pilgrims for each id here too.
+    setPilgrimsData((prev) => prev.filter((p) => !selectedIds.has(p.id)));
     toast.success(`${selectedIds.size} pilgrims removed from campaign`);
     setSelectedIds(new Set());
   };
 
   const handleDelete = (id: string) => {
-    // Backend integration point: DELETE /api/pilgrims/:id
+    // TODO: once the database is connected, replace with DELETE /api/pilgrims/:id
+    setPilgrimsData((prev) => prev.filter((p) => p.id !== id));
     toast.success(`Pilgrim ${id} removed`);
     setDeleteConfirm(null);
   };
@@ -357,7 +361,7 @@ export default function PilgrimTable() {
                       <td className="py-2.5 px-3">
                         <div className="flex items-center gap-1">
                           <Link
-                            href="/pilgrim-profile"
+                            href={`/pilgrim-profile/${p.id}`}
                             className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
                             title="View profile"
                           >
