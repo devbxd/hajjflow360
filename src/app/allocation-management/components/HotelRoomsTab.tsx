@@ -1,40 +1,60 @@
 'use client';
 
-import React, { useState } from 'react';
-import { hotels } from '@/lib/mockData';
+import React, { useState, useMemo } from 'react';
+import type { HotelRow } from '@/lib/data/logistics';
+import type { Pilgrim } from '@/lib/mockData';
 import { Building2, Users, MapPin, Bed } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 
-const roomTypes = [
-  { type: 'single', label: 'Single', capacity: 1, color: 'bg-[#EFF6FF] text-[#2563EB]' },
-  { type: 'double', label: 'Double', capacity: 2, color: 'bg-secondary text-primary' },
-  { type: 'triple', label: 'Triple', capacity: 3, color: 'bg-[#F5F3FF] text-[#7C3AED]' },
-  { type: 'quad', label: 'Quad', capacity: 4, color: 'bg-accent/10 text-accent' },
-];
+const ROOM_TYPE_STYLE: Record<string, string> = {
+  single: 'bg-[#EFF6FF] text-[#2563EB]',
+  double: 'bg-secondary text-primary',
+  triple: 'bg-[#F5F3FF] text-[#7C3AED]',
+  quad: 'bg-accent/10 text-accent',
+};
+const ROOM_CAPACITY: Record<string, number> = { single: 1, double: 2, triple: 3, quad: 4 };
 
-export default function HotelRoomsTab() {
+interface HotelRoomsTabProps {
+  hotels: HotelRow[];
+  pilgrims: Pilgrim[];
+}
+
+export default function HotelRoomsTab({ hotels, pilgrims }: HotelRoomsTabProps) {
   const [selectedHotel, setSelectedHotel] = useState(hotels[0]);
   const [cityFilter, setCityFilter] = useState<'all' | 'Makkah' | 'Madinah'>('all');
 
   const filteredHotels = hotels.filter((h) => cityFilter === 'all' || h.city === cityFilter);
 
-  const fillPct = Math.round((selectedHotel.allocatedRooms / selectedHotel.totalRooms) * 100);
+  const hotelGuests = useMemo(
+    () => (selectedHotel ? pilgrims.filter((p) => p.hotelMakkah === selectedHotel.name || p.hotelMadinah === selectedHotel.name) : []),
+    [pilgrims, selectedHotel]
+  );
 
-  // Generate mock room list for selected hotel
-  const roomList = Array.from({ length: Math.min(selectedHotel.totalRooms, 20) }, (_, i) => {
-    const floor = Math.floor(i / 4) + 1;
-    const roomNum = `${floor}${String((i % 4) + 1).padStart(2, '0')}`;
-    const typeIdx = i % 4;
-    const occupied = i < selectedHotel.allocatedRooms;
-    return {
-      id: `room-${selectedHotel.id}-${roomNum}`,
-      number: roomNum,
-      type: roomTypes[typeIdx].type,
-      floor,
-      occupied,
-      pilgrimCount: occupied ? roomTypes[typeIdx].capacity : 0,
-    };
-  });
+  const rooms = useMemo(() => {
+    const byRoom = new Map<string, { number: string; type: string; guests: Pilgrim[] }>();
+    for (const g of hotelGuests) {
+      if (!g.roomNumber) continue;
+      const existing = byRoom.get(g.roomNumber);
+      if (existing) {
+        existing.guests.push(g);
+      } else {
+        byRoom.set(g.roomNumber, { number: g.roomNumber, type: g.roomType ?? 'double', guests: [g] });
+      }
+    }
+    return Array.from(byRoom.values()).sort((a, b) => a.number.localeCompare(b.number));
+  }, [hotelGuests]);
+
+  const roomTypeCounts = useMemo(() => {
+    const counts: Record<string, number> = { single: 0, double: 0, triple: 0, quad: 0 };
+    for (const r of rooms) counts[r.type] = (counts[r.type] ?? 0) + 1;
+    return counts;
+  }, [rooms]);
+
+  if (!selectedHotel) {
+    return <div className="card-base text-sm text-muted-foreground">No hotels configured yet.</div>;
+  }
+
+  const fillPct = selectedHotel.totalRooms > 0 ? Math.round((selectedHotel.allocatedRooms / selectedHotel.totalRooms) * 100) : 0;
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 2xl:grid-cols-3 gap-6">
@@ -60,7 +80,7 @@ export default function HotelRoomsTab() {
         </div>
         <div className="space-y-2 max-h-[500px] overflow-y-auto scrollbar-thin pr-1">
           {filteredHotels.map((hotel) => {
-            const hFill = Math.round((hotel.allocatedRooms / hotel.totalRooms) * 100);
+            const hFill = hotel.totalRooms > 0 ? Math.round((hotel.allocatedRooms / hotel.totalRooms) * 100) : 0;
             const isSelected = selectedHotel.id === hotel.id;
             return (
               <button
@@ -124,16 +144,17 @@ export default function HotelRoomsTab() {
 
           {/* Room Type Breakdown */}
           <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 mt-4">
-            {roomTypes.map((rt) => {
-              const count = Math.floor(selectedHotel.totalRooms / 4);
+            {Object.entries(roomTypeCounts).map(([type, count]) => {
+              const style = ROOM_TYPE_STYLE[type] ?? ROOM_TYPE_STYLE.double;
+              const [bg, text] = style.split(' ');
               return (
-                <div key={`rt-${rt.type}`} className={`p-3 rounded-lg ${rt.color.split(' ')[0]}`}>
+                <div key={`rt-${type}`} className={`p-3 rounded-lg ${bg}`}>
                   <div className="flex items-center gap-1.5 mb-1">
-                    <Bed size={12} className={rt.color.split(' ')[1]} />
-                    <span className={`text-xs font-medium ${rt.color.split(' ')[1]}`}>{rt.label}</span>
+                    <Bed size={12} className={text} />
+                    <span className={`text-xs font-medium capitalize ${text}`}>{type}</span>
                   </div>
-                  <p className={`text-lg font-bold tabular-nums ${rt.color.split(' ')[1]}`}>{count}</p>
-                  <p className="text-xs text-muted-foreground">{rt.capacity} per room</p>
+                  <p className={`text-lg font-bold tabular-nums ${text}`}>{count}</p>
+                  <p className="text-xs text-muted-foreground">{ROOM_CAPACITY[type]} per room</p>
                 </div>
               );
             })}
@@ -142,12 +163,12 @@ export default function HotelRoomsTab() {
 
         {/* Room List */}
         <div className="card-base">
-          <h3 className="text-sm font-semibold text-foreground mb-3">Room Assignments (showing first 20)</h3>
+          <h3 className="text-sm font-semibold text-foreground mb-3">Booked Rooms ({rooms.length})</h3>
           <div className="overflow-x-auto scrollbar-thin">
             <table className="w-full text-sm">
               <thead>
                 <tr className="border-b border-border bg-muted/30">
-                  {['Room', 'Floor', 'Type', 'Capacity', 'Status', 'Pilgrims', ''].map((h) => (
+                  {['Room', 'Type', 'Capacity', 'Status', 'Guests'].map((h) => (
                     <th key={`rh-${h}`} className="text-left py-2 px-3 text-xs font-medium text-muted-foreground uppercase tracking-wide">
                       {h}
                     </th>
@@ -155,26 +176,26 @@ export default function HotelRoomsTab() {
                 </tr>
               </thead>
               <tbody>
-                {roomList.map((room) => {
-                  const rt = roomTypes.find((r) => r.type === room.type);
+                {rooms.length === 0 && (
+                  <tr>
+                    <td colSpan={5} className="py-6 px-3 text-center text-sm text-muted-foreground">No rooms booked at this hotel yet.</td>
+                  </tr>
+                )}
+                {rooms.map((room) => {
+                  const style = ROOM_TYPE_STYLE[room.type] ?? ROOM_TYPE_STYLE.double;
+                  const capacity = ROOM_CAPACITY[room.type] ?? 2;
                   return (
-                    <tr key={room.id} className="table-row-hover border-b border-border/50 last:border-0">
+                    <tr key={room.number} className="table-row-hover border-b border-border/50 last:border-0">
                       <td className="py-2.5 px-3 font-mono-data text-sm font-semibold text-foreground">{room.number}</td>
-                      <td className="py-2.5 px-3 text-sm text-muted-foreground">Floor {room.floor}</td>
                       <td className="py-2.5 px-3">
-                        <span className={`status-badge text-xs ${rt?.color}`}>{rt?.label}</span>
+                        <span className={`status-badge text-xs capitalize ${style}`}>{room.type}</span>
                       </td>
-                      <td className="py-2.5 px-3 text-sm text-muted-foreground tabular-nums">{rt?.capacity} pax</td>
+                      <td className="py-2.5 px-3 text-sm text-muted-foreground tabular-nums">{capacity} pax</td>
                       <td className="py-2.5 px-3">
-                        <StatusBadge status={room.occupied ? 'allocated' : 'unallocated'} size="sm" />
+                        <StatusBadge status="allocated" size="sm" />
                       </td>
-                      <td className="py-2.5 px-3 text-sm tabular-nums text-muted-foreground">
-                        {room.occupied ? `${room.pilgrimCount}/${rt?.capacity}` : '0'}
-                      </td>
-                      <td className="py-2.5 px-3">
-                        <button className="text-xs text-primary hover:underline font-medium">
-                          {room.occupied ? 'View' : 'Assign'}
-                        </button>
+                      <td className="py-2.5 px-3 text-sm text-muted-foreground">
+                        {room.guests.map((g) => g.name).join(', ')}
                       </td>
                     </tr>
                   );

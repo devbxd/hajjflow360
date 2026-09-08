@@ -1,31 +1,46 @@
 'use client';
 
 import React, { useState } from 'react';
-import { flights, pilgrims } from '@/lib/mockData';
+import type { FlightRow } from '@/lib/data/logistics';
+import type { Pilgrim } from '@/lib/mockData';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { Plane, Users, Clock, CheckCircle2, Download, Search } from 'lucide-react';
 
-export default function FlightManifestsTab() {
+interface FlightManifestsTabProps {
+  flights: FlightRow[];
+  pilgrims: Pilgrim[];
+}
+
+export default function FlightManifestsTab({ flights, pilgrims }: FlightManifestsTabProps) {
   const [selectedFlight, setSelectedFlight] = useState(flights[0]);
   const [manifestSearch, setManifestSearch] = useState('');
 
-  // Generate manifest entries for selected flight
+  if (!selectedFlight) {
+    return <div className="card-base text-sm text-muted-foreground">No flights configured yet.</div>;
+  }
+
   const manifestPilgrims = pilgrims
-    .filter((p) => p.flightNumber === selectedFlight.flightNumber || (!p.flightNumber && selectedFlight.id === 'FLT-004'))
+    .filter((p) => p.flightNumber === selectedFlight.flightNumber)
     .filter((p) =>
       manifestSearch === '' ||
       p.name.toLowerCase().includes(manifestSearch.toLowerCase()) ||
       p.passportNumber.toLowerCase().includes(manifestSearch.toLowerCase())
     );
 
-  // Supplement with mock entries to show volume
-  const supplementManifest = [
-    { id: 'PIL-020', name: 'Karim Bensouda', passportNumber: 'MA5521987', nationality: 'Morocco', seatNumber: '14C', visaStatus: 'approved', gender: 'M' },
-    { id: 'PIL-021', name: 'Aisha Diallo Traore', passportNumber: 'SN3312098', nationality: 'Senegal', seatNumber: '15A', visaStatus: 'approved', gender: 'F' },
-    { id: 'PIL-022', name: 'Mahmoud Al-Masri', passportNumber: 'EG7723456', nationality: 'Egypt', seatNumber: '16B', visaStatus: 'approved', gender: 'M' },
-    { id: 'PIL-023', name: 'Hassan Boudiaf', passportNumber: 'DZ8812345', nationality: 'Algeria', seatNumber: '17D', visaStatus: 'pending', gender: 'M' },
-    { id: 'PIL-024', name: 'Khadija Osman Nur', passportNumber: 'SO2234567', nationality: 'Somalia', seatNumber: '18A', visaStatus: 'approved', gender: 'F' },
-  ];
+  const handleExport = () => {
+    const rows = [
+      ['Pilgrim ID', 'Name', 'Nationality', 'Passport #', 'Seat', 'Visa', 'Gender'],
+      ...manifestPilgrims.map((p) => [p.id, p.name, p.nationality, p.passportNumber, p.seatNumber ?? '', p.visaStatus, p.gender]),
+    ];
+    const csv = rows.map((r) => r.map((c) => `"${String(c).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = `${selectedFlight.flightNumber}_manifest.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+  };
 
   const confirmedCount = selectedFlight.confirmed;
   const pendingCount = selectedFlight.passengers - selectedFlight.confirmed;
@@ -36,7 +51,7 @@ export default function FlightManifestsTab() {
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
         {flights.map((flight) => {
           const isSelected = selectedFlight.id === flight.id;
-          const confPct = Math.round((flight.confirmed / flight.passengers) * 100);
+          const confPct = flight.passengers > 0 ? Math.round((flight.confirmed / flight.passengers) * 100) : 0;
           return (
             <button
               key={`flt-${flight.id}`}
@@ -112,7 +127,7 @@ export default function FlightManifestsTab() {
                 className="pl-8 pr-3 py-1.5 text-xs border border-border rounded-lg bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring w-44"
               />
             </div>
-            <button className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5">
+            <button onClick={handleExport} className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5">
               <Download size={12} />
               Export Manifest
             </button>
@@ -131,17 +146,16 @@ export default function FlightManifestsTab() {
               </tr>
             </thead>
             <tbody>
-              {[...manifestPilgrims, ...supplementManifest]
-                .filter((p) =>
-                  manifestSearch === '' ||
-                  p.name.toLowerCase().includes(manifestSearch.toLowerCase()) ||
-                  p.passportNumber.toLowerCase().includes(manifestSearch.toLowerCase())
-                )
+              {manifestPilgrims.length === 0 && (
+                <tr>
+                  <td colSpan={9} className="py-6 px-3 text-center text-sm text-muted-foreground">No pilgrims match.</td>
+                </tr>
+              )}
+              {manifestPilgrims
                 .map((p, idx) => {
-                  const isFullPilgrim = 'visaStatus' in p && typeof (p as { flightNumber?: string }).flightNumber !== 'undefined';
-                  const visaStatus = (p as { visaStatus: string }).visaStatus as 'approved' | 'pending';
-                  const gender = (p as { gender: string }).gender;
-                  const seat = (p as { seatNumber?: string }).seatNumber;
+                  const visaStatus = p.visaStatus === 'approved' ? 'approved' : 'pending';
+                  const gender = p.gender;
+                  const seat = p.seatNumber;
                   return (
                     <tr key={`manifest-${p.id}`} className="table-row-hover border-b border-border/50 last:border-0">
                       <td className="py-2.5 px-3 text-xs text-muted-foreground tabular-nums">{idx + 1}</td>

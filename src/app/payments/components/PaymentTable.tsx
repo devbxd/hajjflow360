@@ -4,24 +4,26 @@ import React, { useState, useMemo, useEffect } from 'react';
 import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { buildPaymentRows, type PaymentRow } from '../paymentRows';
+import type { Pilgrim } from '@/lib/mockData';
 
 type SortKey = 'name' | 'paymentTotal' | 'paymentPaid' | 'balance' | 'paymentStatus';
 type SortDir = 'asc' | 'desc';
 
 interface PaymentTableProps {
+  pilgrims: Pilgrim[];
   search: string;
   filterStatus: string;
   onVisibleRowsChange?: (rows: PaymentRow[]) => void;
 }
 
-export default function PaymentTable({ search, filterStatus, onVisibleRowsChange }: PaymentTableProps) {
+export default function PaymentTable({ pilgrims, search, filterStatus, onVisibleRowsChange }: PaymentTableProps) {
   const [sortKey, setSortKey] = useState<SortKey>('paymentStatus');
   const [sortDir, setSortDir] = useState<SortDir>('asc');
   const [selected, setSelected] = useState<Set<string>>(new Set());
   const [page, setPage] = useState(0);
   const PAGE_SIZE = 8;
 
-  const allRows = useMemo(() => buildPaymentRows(), []);
+  const allRows = useMemo(() => buildPaymentRows(pilgrims), [pilgrims]);
 
   const tableData = useMemo(() => {
     let rows = allRows;

@@ -24,13 +24,13 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Le nouveau mot de passe doit faire au moins 8 caractères.' }, { status: 400 });
   }
 
-  const user = findUser(session.username);
+  const user = await findUser(session.username);
   if (!user || !bcrypt.compareSync(currentPassword, user.passwordHash)) {
     return NextResponse.json({ error: 'Mot de passe actuel incorrect.' }, { status: 401 });
   }
 
   const newHash = bcrypt.hashSync(newPassword, 10);
-  updatePasswordHash(session.username, newHash);
+  await updatePasswordHash(session.username, newHash);
 
   return NextResponse.json({ ok: true });
 }

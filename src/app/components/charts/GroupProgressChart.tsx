@@ -2,7 +2,15 @@
 
 import React from 'react';
 import { BarChart, Bar, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer, Legend } from 'recharts';
-import { groupProgressData } from '@/lib/mockData';
+
+export interface GroupProgressDatum {
+  group: string;
+  leader: string;
+  pilgrims: number;
+  visa: number;
+  payment: number;
+  passport: number;
+}
 
 const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ name: string; value: number; color: string }>; label?: string }) => {
   if (active && payload && payload.length) {
@@ -20,10 +28,10 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
   return null;
 };
 
-export default function GroupProgressChart() {
+export default function GroupProgressChart({ data }: { data: GroupProgressDatum[] }) {
   return (
     <ResponsiveContainer width="100%" height={200}>
-      <BarChart data={groupProgressData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+      <BarChart data={data} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
         <CartesianGrid strokeDasharray="3 3" stroke="var(--border)" vertical={false} />
         <XAxis dataKey="group" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} />
         <YAxis domain={[0, 100]} tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} unit="%" />

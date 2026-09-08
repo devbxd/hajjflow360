@@ -1,7 +1,7 @@
 import React from 'react';
 import { Layers, AlertTriangle } from 'lucide-react';
 
-export default function AllocationHeader() {
+export default function AllocationHeader({ unallocatedCount }: { unallocatedCount: number }) {
   return (
     <div className="mb-6 flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
       <div className="flex items-center gap-3">
@@ -16,7 +16,7 @@ export default function AllocationHeader() {
       <div className="flex items-center gap-3 flex-shrink-0">
         <div className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-[#FFFBEB] border border-[#D97706]/20">
           <AlertTriangle size={13} className="text-[#D97706]" />
-          <span className="text-xs font-medium text-[#D97706]">52 pilgrims unallocated</span>
+          <span className="text-xs font-medium text-[#D97706]">{unallocatedCount} pilgrims unallocated</span>
         </div>
         <button className="btn-primary text-sm">Auto-Assign Remaining</button>
       </div>

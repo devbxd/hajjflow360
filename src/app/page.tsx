@@ -6,23 +6,73 @@ import DashboardCharts from './components/DashboardCharts';
 import AtRiskTable from './components/AtRiskTable';
 import ActivityFeed from './components/ActivityFeed';
 import GroupLeaderSummary from './components/GroupLeaderSummary';
+import { getAllPilgrims } from '@/lib/data/pilgrims';
+import { getGroupLeaders } from '@/lib/data/groupLeaders';
+import { getCampaignStats, computeAtRisk, getRegistrationTimeline } from '@/lib/data/campaign';
+import { getRecentActivity } from '@/lib/data/activity';
+import type { VisaChartDatum } from './components/charts/VisaStatusChart';
+import type { GroupProgressDatum } from './components/charts/GroupProgressChart';
 
-export default function CampaignDashboardPage() {
+// Reads live data on every request instead of being frozen at build time.
+export const dynamic = 'force-dynamic';
+
+const VISA_COLORS: Record<string, string> = {
+  Approved: '#16A34A',
+  Pending: '#D97706',
+  Processing: '#2563EB',
+  Rejected: '#DC2626',
+};
+
+export default async function CampaignDashboardPage() {
+  const [pilgrims, groupLeaders, stats, registrationData, activity] = await Promise.all([
+    getAllPilgrims(),
+    getGroupLeaders(),
+    getCampaignStats(),
+    getRegistrationTimeline(),
+    getRecentActivity(8),
+  ]);
+
+  const atRisk = computeAtRisk(pilgrims, Math.max(1, Math.ceil((new Date(2027, 8, 15).getTime() - Date.now()) / 86400000)));
+
+  const visaData: VisaChartDatum[] = [
+    { name: 'Approved', value: stats.visaApproved, fill: VISA_COLORS.Approved },
+    { name: 'Pending', value: stats.visaPending, fill: VISA_COLORS.Pending },
+    { name: 'Processing', value: stats.visaProcessing, fill: VISA_COLORS.Processing },
+    { name: 'Rejected', value: stats.visaRejected, fill: VISA_COLORS.Rejected },
+  ];
+
+  const groupProgressData: GroupProgressDatum[] = groupLeaders.map((gl) => {
+    const total = gl.pilgrimCount || 1;
+    return {
+      group: gl.groupId,
+      leader: gl.name.split(' ').slice(0, 2).join(' '),
+      pilgrims: gl.pilgrimCount,
+      visa: Math.round((gl.visaApproved / total) * 1000) / 10,
+      payment: Math.round((gl.paymentComplete / total) * 1000) / 10,
+      passport: Math.round((gl.passportVerified / total) * 1000) / 10,
+    };
+  });
+
   return (
     <AppLayout>
-      <CampaignHeader />
-      <MetricsBentoGrid />
-      <DashboardCharts />
+      <CampaignHeader stats={stats} pilgrims={pilgrims} />
+      <MetricsBentoGrid stats={stats} />
+      <DashboardCharts
+        totalPilgrims={stats.totalPilgrims}
+        visaData={visaData}
+        groupProgressData={groupProgressData}
+        registrationData={registrationData}
+      />
       <div className="mt-6 grid grid-cols-1 xl:grid-cols-3 2xl:grid-cols-3 gap-6">
         <div className="xl:col-span-2">
-          <AtRiskTable />
+          <AtRiskTable data={atRisk} />
         </div>
         <div className="xl:col-span-1">
-          <ActivityFeed />
+          <ActivityFeed activity={activity} />
         </div>
       </div>
       <div className="mt-6">
-        <GroupLeaderSummary />
+        <GroupLeaderSummary groupLeaders={groupLeaders} />
       </div>
     </AppLayout>
   );

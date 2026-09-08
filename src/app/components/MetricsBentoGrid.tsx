@@ -1,5 +1,5 @@
 import React from 'react';
-import { campaignStats } from '@/lib/mockData';
+import type { CampaignStats } from '@/lib/data/campaign';
 import { Users, CreditCard, Bus, Building2, Plane, AlertTriangle } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
 
@@ -62,10 +62,10 @@ function ProgressCard({
   rejected: number;
   processing?: number;
 }) {
-  const approvedPct = Math.round((approved / total) * 100);
-  const pendingPct = Math.round((pending / total) * 100);
-  const rejectedPct = Math.round((rejected / total) * 100);
-  const processingPct = processing ? Math.round((processing / total) * 100) : 0;
+  const approvedPct = total > 0 ? Math.round((approved / total) * 100) : 0;
+  const pendingPct = total > 0 ? Math.round((pending / total) * 100) : 0;
+  const rejectedPct = total > 0 ? Math.round((rejected / total) * 100) : 0;
+  const processingPct = processing && total > 0 ? Math.round((processing / total) * 100) : 0;
 
   return (
     <div className="card-base flex flex-col gap-3">
@@ -106,11 +106,9 @@ function ProgressCard({
   );
 }
 
-const groupLeaderCount = 18;
-
-export default function MetricsBentoGrid() {
-  const s = campaignStats;
-  const collectionPct = Math.round((s.collectedRevenue / s.totalRevenue) * 100);
+export default function MetricsBentoGrid({ stats }: { stats: CampaignStats }) {
+  const s = stats;
+  const collectionPct = s.totalRevenue > 0 ? Math.round((s.collectedRevenue / s.totalRevenue) * 100) : 0;
 
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-4 gap-4 mb-6">
@@ -136,9 +134,9 @@ export default function MetricsBentoGrid() {
         <div className="flex gap-4 text-xs text-muted-foreground">
           <span>{s.groupsTotal} groups</span>
           <span>·</span>
-          <span>{groupLeaderCount} group leaders</span>
+          <span>{s.groupsTotal} group leaders</span>
           <span>·</span>
-          <span>18 nationalities</span>
+          <span>{s.nationalitiesCount} nationalities</span>
         </div>
       </div>
 

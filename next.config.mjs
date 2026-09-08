@@ -7,6 +7,10 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   outputFileTracingRoot: __dirname,
+  // pg is Node-only (uses `fs`/`net`) — keep it un-bundled so the server
+  // just requires it natively instead of webpack trying to statically
+  // analyze its conditional requires.
+  serverExternalPackages: ['pg'],
   productionBrowserSourceMaps: true,
   distDir: process.env.DIST_DIR || '.next',
   typescript: {

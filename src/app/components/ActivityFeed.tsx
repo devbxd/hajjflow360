@@ -1,5 +1,5 @@
 import React from 'react';
-import { recentActivity } from '@/lib/mockData';
+import type { ActivityEntry } from '@/lib/data/activity';
 import { CheckCircle2, CreditCard, ScanLine, AlertTriangle, Bus, MessageSquare, QrCode, Loader2 } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
 
@@ -37,15 +37,16 @@ const iconBgMap: Record<string, string> = {
   processing: 'bg-[#EFF6FF]',
 };
 
-export default function ActivityFeed() {
+export default function ActivityFeed({ activity }: { activity: ActivityEntry[] }) {
   return (
     <div className="card-base h-full">
       <div className="flex items-center justify-between mb-4">
         <h3 className="text-sm font-semibold text-foreground">Recent Activity</h3>
-        <span className="text-xs text-muted-foreground">Last updated 8 min ago</span>
+        <span className="text-xs text-muted-foreground">{activity[0]?.time ?? '—'}</span>
       </div>
       <div className="space-y-3">
-        {recentActivity.map((act) => {
+        {activity.length === 0 && <p className="text-sm text-muted-foreground">No recent activity yet.</p>}
+        {activity.map((act) => {
           const Icon = iconMap[act.icon] ?? CheckCircle2;
           return (
             <div key={`act-${act.id}`} className="flex items-start gap-3">

@@ -2,22 +2,17 @@
 
 import React from 'react';
 import { TrendingUp, Users, AlertTriangle, Clock, CheckCircle2, BarChart3 } from 'lucide-react';
-import { campaignStats } from '@/lib/mockData';
-import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, Cell } from 'recharts';
-import Icon from '@/components/ui/AppIcon';
+import type { CampaignStats } from '@/lib/data/campaign';
+import type { MonthlyCollection } from '@/lib/data/campaign';
+import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
 
+interface PaymentMetricsProps {
+  stats: CampaignStats;
+  monthlyCollections: MonthlyCollection[];
+}
 
-const installmentData = [
-  { month: 'Oct 26', collected: 1820000, target: 2000000 },
-  { month: 'Dec 26', collected: 2340000, target: 2500000 },
-  { month: 'Feb 27', collected: 2100000, target: 2200000 },
-  { month: 'Apr 27', collected: 1980000, target: 2100000 },
-  { month: 'Jun 27', collected: 1650000, target: 1800000 },
-  { month: 'Aug 27', collected: 1033000, target: 1687500 },
-];
-
-export default function PaymentMetrics() {
-  const collectionRate = Math.round((campaignStats.collectedRevenue / campaignStats.totalRevenue) * 100);
+export default function PaymentMetrics({ stats: campaignStats, monthlyCollections }: PaymentMetricsProps) {
+  const collectionRate = campaignStats.totalRevenue > 0 ? Math.round((campaignStats.collectedRevenue / campaignStats.totalRevenue) * 100) : 0;
   const outstanding = campaignStats.totalRevenue - campaignStats.collectedRevenue;
 
   const metrics = [
@@ -64,7 +59,7 @@ export default function PaymentMetrics() {
     {
       label: 'Collection Rate',
       value: `${collectionRate}%`,
-      sub: 'campaign target: 95%',
+      sub: 'of total revenue billed',
       icon: TrendingUp,
       color: collectionRate >= 90 ? 'text-[#16A34A]' : collectionRate >= 70 ? 'text-[#D97706]' : 'text-[#DC2626]',
       bg: collectionRate >= 90 ? 'bg-[#F0FDF4]' : collectionRate >= 70 ? 'bg-[#FFFBEB]' : 'bg-[#FEF2F2]',
@@ -90,51 +85,34 @@ export default function PaymentMetrics() {
         })}
       </div>
 
-      {/* Installment Collection Chart */}
+      {/* Monthly Collection Chart */}
       <div className="card-base">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h3 className="text-sm font-semibold text-foreground">Installment Collection Schedule</h3>
-            <p className="text-xs text-muted-foreground mt-0.5">Monthly collected vs target (SAR)</p>
-          </div>
-          <div className="flex items-center gap-4 text-xs text-muted-foreground">
-            <span className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm bg-primary inline-block" />
-              Collected
-            </span>
-            <span className="flex items-center gap-1.5">
-              <span className="w-3 h-3 rounded-sm bg-border inline-block" />
-              Target
-            </span>
+            <h3 className="text-sm font-semibold text-foreground">Monthly Collections</h3>
+            <p className="text-xs text-muted-foreground mt-0.5">Amount collected per month (SAR)</p>
           </div>
         </div>
-        <ResponsiveContainer width="100%" height={160}>
-          <BarChart data={installmentData} barGap={4} barCategoryGap="30%">
-            <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#6B6560' }} axisLine={false} tickLine={false} />
-            <YAxis
-              tick={{ fontSize: 10, fill: '#6B6560' }}
-              axisLine={false}
-              tickLine={false}
-              tickFormatter={(v) => `${(v / 1_000_000).toFixed(1)}M`}
-            />
-            <Tooltip
-              formatter={(value: number, name: string) => [
-                `SAR ${(value / 1_000_000).toFixed(2)}M`,
-                name === 'collected' ? 'Collected' : 'Target',
-              ]}
-              contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid var(--border)' }}
-            />
-            <Bar dataKey="target" fill="#E2DED8" radius={[4, 4, 0, 0]} />
-            <Bar dataKey="collected" radius={[4, 4, 0, 0]}>
-              {installmentData.map((entry, index) => (
-                <Cell
-                  key={`cell-${index}`}
-                  fill={entry.collected >= entry.target ? '#1B6B4A' : entry.collected / entry.target >= 0.85 ? '#C5A028' : '#DC2626'}
-                />
-              ))}
-            </Bar>
-          </BarChart>
-        </ResponsiveContainer>
+        {monthlyCollections.length === 0 ? (
+          <p className="text-sm text-muted-foreground py-8 text-center">No payments recorded yet.</p>
+        ) : (
+          <ResponsiveContainer width="100%" height={160}>
+            <BarChart data={monthlyCollections} barCategoryGap="30%">
+              <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#6B6560' }} axisLine={false} tickLine={false} />
+              <YAxis
+                tick={{ fontSize: 10, fill: '#6B6560' }}
+                axisLine={false}
+                tickLine={false}
+                tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
+              />
+              <Tooltip
+                formatter={(value: number) => [`SAR ${value.toLocaleString()}`, 'Collected']}
+                contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid var(--border)' }}
+              />
+              <Bar dataKey="collected" fill="#1B6B4A" radius={[4, 4, 0, 0]} />
+            </BarChart>
+          </ResponsiveContainer>
+        )}
       </div>
     </div>
   );

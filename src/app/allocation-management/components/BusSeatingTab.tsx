@@ -1,35 +1,44 @@
 'use client';
 
 import React, { useState } from 'react';
-import { buses } from '@/lib/mockData';
+import type { BusRow } from '@/lib/data/logistics';
+import type { Pilgrim } from '@/lib/mockData';
 import { Users, MapPin, User } from 'lucide-react';
 
-// Generate seats for a given bus
-function generateSeats(busNumber: number, allocated: number) {
-  const seats: { id: string; row: string; col: number; occupied: boolean; pilgrimId?: string }[] = [];
+// Lays real pilgrims assigned to this bus into the visual 5x10 grid, in
+// order. The grid position doesn't necessarily match each pilgrim's stored
+// seatNumber label (that's free-text and not constrained to this layout) —
+// what's real is which pilgrims are on this bus and the actual fill count.
+function buildSeats(busNumber: number, occupants: Pilgrim[]) {
+  const seats: { id: string; row: string; col: number; occupied: boolean; pilgrim?: Pilgrim }[] = [];
   const rows = ['A', 'B', 'C', 'D', 'E'];
-  let filled = 0;
+  let idx = 0;
   for (let r = 0; r < rows.length; r++) {
     for (let c = 1; c <= 10; c++) {
-      const occupied = filled < allocated;
+      const pilgrim = occupants[idx];
       seats.push({
         id: `bus${busNumber}-${rows[r]}${c}`,
         row: rows[r],
         col: c,
-        occupied,
-        pilgrimId: occupied ? `PIL-${String(Math.floor(filled * 3.2 + busNumber * 7) % 850 + 1).padStart(3, '0')}` : undefined,
+        occupied: Boolean(pilgrim),
+        pilgrim,
       });
-      if (occupied) filled++;
+      idx++;
     }
   }
   return seats;
 }
 
-export default function BusSeatingTab() {
+export default function BusSeatingTab({ buses, pilgrims }: { buses: BusRow[]; pilgrims: Pilgrim[] }) {
   const [selectedBus, setSelectedBus] = useState(buses[0]);
   const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
-  const seats = generateSeats(selectedBus.number, selectedBus.allocated);
+  const occupants = pilgrims.filter((p) => p.busNumber === selectedBus?.number);
+  const seats = selectedBus ? buildSeats(selectedBus.number, occupants) : [];
   const rows = ['A', 'B', 'C', 'D', 'E'];
+
+  if (!selectedBus) {
+    return <div className="card-base text-sm text-muted-foreground">No buses configured yet.</div>;
+  }
 
   return (
     <div className="grid grid-cols-1 xl:grid-cols-3 2xl:grid-cols-3 gap-6">
@@ -140,7 +149,7 @@ export default function BusSeatingTab() {
                     <button
                       key={seat.id}
                       onClick={() => setSelectedSeat(isSelected ? null : seat.id)}
-                      title={seat.occupied ? `${seat.pilgrimId} — ${row}${i + 1}` : `Empty — ${row}${i + 1}`}
+                      title={seat.occupied ? `${seat.pilgrim?.name} (${seat.pilgrim?.id}) — ${row}${i + 1}` : `Empty — ${row}${i + 1}`}
                       className={`w-9 h-9 rounded text-xs font-medium transition-all ${
                         isSelected
                           ? 'seat-selected scale-110 shadow-md'
@@ -170,8 +179,8 @@ export default function BusSeatingTab() {
                     <p className="text-sm font-medium text-foreground">
                       Seat {seat.row}{seat.col} — {seat.occupied ? 'Occupied' : 'Available'}
                     </p>
-                    {seat.occupied && (
-                      <p className="text-xs font-mono-data text-muted-foreground mt-0.5">{seat.pilgrimId}</p>
+                    {seat.occupied && seat.pilgrim && (
+                      <p className="text-xs font-mono-data text-muted-foreground mt-0.5">{seat.pilgrim.name} · {seat.pilgrim.id}</p>
                     )}
                   </div>
                   <div className="flex items-center gap-2">

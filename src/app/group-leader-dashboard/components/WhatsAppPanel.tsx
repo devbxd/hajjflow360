@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { MessageSquare, Send, Users, CheckCheck } from 'lucide-react';
 import { toast } from 'sonner';
+import type { Pilgrim } from '@/lib/mockData';
 
 const templates = [
   { id: 'tpl-passport', label: 'Passport Reminder', body: 'Dear pilgrim, please submit your passport scan to the campaign office by 10/09/2027. Failure to do so may delay your visa. JazakAllah khair.' },
@@ -11,17 +12,17 @@ const templates = [
   { id: 'tpl-general', label: 'General Update', body: '' },
 ];
 
-export default function WhatsAppPanel() {
+export default function WhatsAppPanel({ pilgrims }: { pilgrims: Pilgrim[] }) {
   const [selectedTemplate, setSelectedTemplate] = useState('tpl-general');
   const [message, setMessage] = useState('');
   const [sending, setSending] = useState(false);
   const [recipient, setRecipient] = useState<'all' | 'pending-visa' | 'pending-payment' | 'absent'>('all');
 
   const recipientCounts: Record<typeof recipient, number> = {
-    all: 47,
-    'pending-visa': 3,
-    'pending-payment': 9,
-    absent: 6,
+    all: pilgrims.length,
+    'pending-visa': pilgrims.filter((p) => p.visaStatus === 'pending' || p.visaStatus === 'processing' || p.visaStatus === 'not-started').length,
+    'pending-payment': pilgrims.filter((p) => p.paymentStatus === 'partial' || p.paymentStatus === 'overdue' || p.paymentStatus === 'pending').length,
+    absent: pilgrims.filter((p) => p.attendanceStatus === 'absent').length,
   };
 
   const handleTemplateChange = (id: string) => {
@@ -45,7 +46,7 @@ export default function WhatsAppPanel() {
   };
 
   return (
-    <div className="card-base">
+    <div id="whatsapp-broadcast" className="card-base">
       <div className="flex items-center gap-2 mb-4">
         <div className="p-1.5 rounded-lg bg-[#F0FDF4]">
           <MessageSquare size={14} className="text-[#16A34A]" />

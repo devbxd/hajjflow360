@@ -1,8 +1,8 @@
 import React from 'react';
-import { groupLeaders } from '@/lib/mockData';
+import type { GroupLeader } from '@/lib/mockData';
 import Link from 'next/link';
 
-export default function GroupLeaderSummary() {
+export default function GroupLeaderSummary({ groupLeaders }: { groupLeaders: GroupLeader[] }) {
   return (
     <div className="card-base">
       <div className="flex items-center justify-between mb-4">
@@ -24,10 +24,11 @@ export default function GroupLeaderSummary() {
           </thead>
           <tbody>
             {groupLeaders.map((gl) => {
-              const visaPct = Math.round((gl.visaApproved / gl.pilgrimCount) * 100);
-              const ppPct = Math.round((gl.passportVerified / gl.pilgrimCount) * 100);
-              const payPct = Math.round((gl.paymentComplete / gl.pilgrimCount) * 100);
-              const attPct = Math.round((gl.attendancePresent / gl.pilgrimCount) * 100);
+              const total = gl.pilgrimCount || 1;
+              const visaPct = Math.round((gl.visaApproved / total) * 100);
+              const ppPct = Math.round((gl.passportVerified / total) * 100);
+              const payPct = Math.round((gl.paymentComplete / total) * 100);
+              const attPct = Math.round((gl.attendancePresent / total) * 100);
               return (
                 <tr key={`gl-${gl.id}`} className="table-row-hover border-b border-border/50 last:border-0">
                   <td className="py-2.5 px-3">

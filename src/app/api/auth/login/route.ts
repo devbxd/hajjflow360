@@ -16,7 +16,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Identifiant et mot de passe requis.' }, { status: 400 });
   }
 
-  const user = findUser(username);
+  const user = await findUser(username);
   if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
     return NextResponse.json({ error: 'Identifiant ou mot de passe incorrect.' }, { status: 401 });
   }

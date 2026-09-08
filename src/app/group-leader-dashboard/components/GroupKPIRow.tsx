@@ -1,16 +1,16 @@
 import React from 'react';
-import { groupLeaders } from '@/lib/mockData';
+import type { GroupLeader } from '@/lib/mockData';
 import { CheckCircle2, AlertTriangle, CreditCard, Users } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
 
 
-export default function GroupKPIRow() {
-  const gl = groupLeaders?.[0];
-  const visaPct = Math.round((gl?.visaApproved / gl?.pilgrimCount) * 100);
-  const ppPct = Math.round((gl?.passportVerified / gl?.pilgrimCount) * 100);
-  const payPct = Math.round((gl?.paymentComplete / gl?.pilgrimCount) * 100);
-  const attPct = Math.round((gl?.attendancePresent / gl?.pilgrimCount) * 100);
-  const missingDocs = gl?.pilgrimCount - gl?.passportVerified;
+export default function GroupKPIRow({ groupLeader: gl }: { groupLeader: GroupLeader }) {
+  const total = gl.pilgrimCount || 1;
+  const visaPct = Math.round((gl.visaApproved / total) * 100);
+  const ppPct = Math.round((gl.passportVerified / total) * 100);
+  const payPct = Math.round((gl.paymentComplete / total) * 100);
+  const attPct = Math.round((gl.attendancePresent / total) * 100);
+  const missingDocs = gl.pilgrimCount - gl.passportVerified;
 
   const cards = [
     {

@@ -1,10 +1,11 @@
-'use client';
-
 import React from 'react';
 import Link from 'next/link';
 import AppLayout from '@/components/AppLayout';
-import { pilgrims, atRiskPilgrims } from '@/lib/mockData';
+import { getAllPilgrims } from '@/lib/data/pilgrims';
+import { computeAtRisk } from '@/lib/data/campaign';
 import { AlertTriangle, Phone, ExternalLink } from 'lucide-react';
+
+export const dynamic = 'force-dynamic';
 
 const SEVERITY_STYLE: Record<string, string> = {
   critical: 'bg-[#FEF2F2] text-[#DC2626] border-[#DC2626]/20',
@@ -12,11 +13,10 @@ const SEVERITY_STYLE: Record<string, string> = {
   medium: 'bg-muted text-muted-foreground border-border',
 };
 
-export default function EmergencyListsPage() {
-  const rows = atRiskPilgrims.map((risk) => {
-    const pilgrim = pilgrims.find((p) => p.id === risk.id);
-    return { risk, pilgrim };
-  });
+export default async function EmergencyListsPage() {
+  const pilgrims = await getAllPilgrims();
+  const atRisk = computeAtRisk(pilgrims, 12);
+  const rows = atRisk.map((risk) => ({ risk, pilgrim: pilgrims.find((p) => p.id === risk.id) }));
 
   return (
     <AppLayout>
@@ -44,6 +44,11 @@ export default function EmergencyListsPage() {
               </tr>
             </thead>
             <tbody>
+              {rows.length === 0 && (
+                <tr>
+                  <td colSpan={6} className="px-4 py-8 text-center text-sm text-muted-foreground">No pilgrims currently flagged at risk.</td>
+                </tr>
+              )}
               {rows.map(({ risk, pilgrim }) => (
                 <tr key={risk.id} className="border-b border-border/50 hover:bg-muted/30 transition-colors">
                   <td className="px-4 py-3">

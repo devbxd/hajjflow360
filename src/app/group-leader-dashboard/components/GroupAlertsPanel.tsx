@@ -1,14 +1,6 @@
 import React from 'react';
 import { AlertTriangle, XCircle, Clock } from 'lucide-react';
-import Icon from '@/components/ui/AppIcon';
-
-
-const alerts = [
-  { id: 'AGL-001', pilgrimId: 'PIL-017', name: 'Omar Farouq Hassan', issue: 'Passport missing — visa cannot be initiated', severity: 'critical' as const },
-  { id: 'AGL-002', pilgrimId: 'PIL-015', name: 'Waleed Ibrahim Saad', issue: 'Visa pending — 6 days remaining to approval deadline', severity: 'high' as const },
-  { id: 'AGL-003', pilgrimId: 'PIL-018', name: 'Layla Mustafa Aziz', issue: 'Visa still processing — follow up with MOFA portal', severity: 'medium' as const },
-  { id: 'AGL-004', pilgrimId: 'PIL-006', name: 'Amira Hassan Saleh', issue: 'Payment 50% — SAR 7,800 outstanding', severity: 'high' as const },
-];
+import type { AtRiskEntry } from '@/lib/data/campaign';
 
 const severityIcon = {
   critical: XCircle,
@@ -28,7 +20,7 @@ const severityBg = {
   medium: 'bg-[#EFF6FF] border-[#2563EB]/20',
 };
 
-export default function GroupAlertsPanel() {
+export default function GroupAlertsPanel({ alerts }: { alerts: AtRiskEntry[] }) {
   return (
     <div className="card-base">
       <div className="flex items-center gap-2 mb-4">
@@ -39,6 +31,7 @@ export default function GroupAlertsPanel() {
         </span>
       </div>
       <div className="space-y-3">
+        {alerts.length === 0 && <p className="text-sm text-muted-foreground">No alerts for this group.</p>}
         {alerts.map((alert) => {
           const Icon = severityIcon[alert.severity];
           return (
@@ -48,7 +41,7 @@ export default function GroupAlertsPanel() {
                 <div className="min-w-0">
                   <p className="text-sm font-medium text-foreground">{alert.name}</p>
                   <p className="text-xs text-muted-foreground mt-0.5">{alert.issue}</p>
-                  <p className="text-xs font-mono-data text-muted-foreground mt-0.5">{alert.pilgrimId}</p>
+                  <p className="text-xs font-mono-data text-muted-foreground mt-0.5">{alert.id}</p>
                 </div>
               </div>
             </div>

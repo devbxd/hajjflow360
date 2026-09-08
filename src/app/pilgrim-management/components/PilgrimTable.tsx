@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
-import { pilgrims, type Pilgrim } from '@/lib/mockData';
+import type { Pilgrim } from '@/lib/mockData';
 import StatusBadge, { type StatusType } from '@/components/ui/StatusBadge';
 import {
   Search,
@@ -20,53 +20,13 @@ import {
 import Link from 'next/link';
 import { toast } from 'sonner';
 
-// Extend mock data to simulate 850 pilgrims (show 12 rows + pagination UI)
-const seedPilgrims: Pilgrim[] = [
-  ...pilgrims,
-  {
-    id: 'PIL-013', name: 'Tariq Nour Al-Ghamdi', nationality: 'Saudi Arabia', nationalityCode: 'SA',
-    passportNumber: 'SA4421987', passportExpiry: '10/02/2030', passportStatus: 'verified',
-    visaStatus: 'approved', visaNumber: 'VZ-2027-88520', visaExpiry: '30/10/2027',
-    flightStatus: 'confirmed', flightNumber: 'SV-881', flightDate: '15/09/2027',
-    hotelMakkah: 'Hilton Suites Makkah', hotelMadinah: 'Anwar Al Madinah',
-    roomNumber: '419', roomType: 'double', busNumber: 1, seatNumber: 'A7',
-    groupId: 'GRP-001', groupLeader: 'Sheikh Ahmed Al-Rashidi',
-    paymentTotal: 18500, paymentPaid: 18500, paymentStatus: 'paid',
-    gender: 'M', dateOfBirth: '22/08/1970', age: 57, phone: '+966-55-333-4444',
-    email: 'tariq.ghamdi@email.com', emergencyContact: 'Mona Al-Ghamdi',
-    emergencyPhone: '+966-55-444-5555', attendanceStatus: 'present', registeredAt: '2026-01-20',
-  },
-  {
-    id: 'PIL-014', name: 'Hana Khalil Nasser', nationality: 'Jordan', nationalityCode: 'JO',
-    passportNumber: 'JO7712345', passportExpiry: '05/11/2029', passportStatus: 'verified',
-    visaStatus: 'approved', visaNumber: 'VZ-2027-88521', visaExpiry: '30/10/2027',
-    flightStatus: 'confirmed', flightNumber: 'SV-903', flightDate: '16/09/2027',
-    hotelMakkah: 'Swissotel Makkah', hotelMadinah: 'Oberoi Madinah',
-    roomNumber: '220', roomType: 'double', busNumber: 5, seatNumber: 'A13',
-    groupId: 'GRP-003', groupLeader: 'Sheikh Ibrahim Musa',
-    paymentTotal: 17200, paymentPaid: 17200, paymentStatus: 'paid',
-    gender: 'F', dateOfBirth: '14/05/1983', age: 44, phone: '+962-79-234-5678',
-    email: 'hana.nasser@email.com', emergencyContact: 'Khalil Nasser',
-    emergencyPhone: '+962-79-876-5432', attendanceStatus: 'present', registeredAt: '2026-02-05',
-  },
-];
-
 type SortField = keyof Pilgrim | null;
 type SortDir = 'asc' | 'desc';
 
-const FILTER_TABS = [
-  { id: 'all', label: 'All Pilgrims', count: 850 },
-  { id: 'visa-pending', label: 'Visa Pending', count: 161 },
-  { id: 'unallocated', label: 'Unallocated', count: 52 },
-  { id: 'payment-due', label: 'Payment Due', count: 90 },
-  { id: 'missing-passport', label: 'Missing Passport', count: 22 },
-  { id: 'departed', label: 'Departed', count: 0 },
-];
-
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
-export default function PilgrimTable() {
-  const [pilgrimsData, setPilgrimsData] = useState<Pilgrim[]>(seedPilgrims);
+export default function PilgrimTable({ initialPilgrims }: { initialPilgrims: Pilgrim[] }) {
+  const [pilgrimsData, setPilgrimsData] = useState<Pilgrim[]>(initialPilgrims);
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [sortField, setSortField] = useState<SortField>(null);
@@ -75,6 +35,20 @@ export default function PilgrimTable() {
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+
+  const filterTabs = useMemo(() => {
+    const visaPending = pilgrimsData.filter((p) => p.visaStatus === 'pending' || p.visaStatus === 'processing' || p.visaStatus === 'not-started').length;
+    const unallocated = pilgrimsData.filter((p) => !p.busNumber || !p.roomNumber).length;
+    const paymentDue = pilgrimsData.filter((p) => p.paymentStatus === 'partial' || p.paymentStatus === 'overdue').length;
+    const missingPassport = pilgrimsData.filter((p) => p.passportStatus === 'missing' || p.passportStatus === 'pending').length;
+    return [
+      { id: 'all', label: 'All Pilgrims', count: pilgrimsData.length },
+      { id: 'visa-pending', label: 'Visa Pending', count: visaPending },
+      { id: 'unallocated', label: 'Unallocated', count: unallocated },
+      { id: 'payment-due', label: 'Payment Due', count: paymentDue },
+      { id: 'missing-passport', label: 'Missing Passport', count: missingPassport },
+    ];
+  }, [pilgrimsData]);
 
   const filtered = useMemo(() => {
     let data = [...pilgrimsData];
@@ -142,18 +116,34 @@ export default function PilgrimTable() {
     return sortDir === 'asc' ? <ChevronUp size={12} className="text-primary" /> : <ChevronDown size={12} className="text-primary" />;
   };
 
-  const handleBulkDelete = () => {
-    // TODO: once the database is connected, call DELETE /api/pilgrims for each id here too.
-    setPilgrimsData((prev) => prev.filter((p) => !selectedIds.has(p.id)));
-    toast.success(`${selectedIds.size} pilgrims removed from campaign`);
-    setSelectedIds(new Set());
+  const handleBulkDelete = async () => {
+    const ids = Array.from(selectedIds);
+    try {
+      const res = await fetch('/api/pilgrims/bulk-delete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids }),
+      });
+      if (!res.ok) throw new Error();
+      setPilgrimsData((prev) => prev.filter((p) => !selectedIds.has(p.id)));
+      toast.success(`${ids.length} pilgrims removed from campaign`);
+      setSelectedIds(new Set());
+    } catch {
+      toast.error('Failed to remove pilgrims. Please try again.');
+    }
   };
 
-  const handleDelete = (id: string) => {
-    // TODO: once the database is connected, replace with DELETE /api/pilgrims/:id
-    setPilgrimsData((prev) => prev.filter((p) => p.id !== id));
-    toast.success(`Pilgrim ${id} removed`);
-    setDeleteConfirm(null);
+  const handleDelete = async (id: string) => {
+    try {
+      const res = await fetch(`/api/pilgrims/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      setPilgrimsData((prev) => prev.filter((p) => p.id !== id));
+      toast.success(`Pilgrim ${id} removed`);
+    } catch {
+      toast.error('Failed to remove pilgrim. Please try again.');
+    } finally {
+      setDeleteConfirm(null);
+    }
   };
 
   return (
@@ -176,7 +166,7 @@ export default function PilgrimTable() {
 
           {/* Filter Chips */}
           <div className="flex flex-wrap gap-2">
-            {FILTER_TABS.map((tab) => (
+            {filterTabs.map((tab) => (
               <button
                 key={`filter-${tab.id}`}
                 onClick={() => { setActiveFilter(tab.id); setPage(1); }}

@@ -2,16 +2,10 @@
 
 import React, { useState } from 'react';
 import type { Pilgrim } from '@/lib/mockData';
+import type { PaymentRecord } from '@/lib/data/pilgrims';
 import { ChevronDown, ChevronUp, User, FileText, Globe, MapPin, CreditCard } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Icon from '@/components/ui/AppIcon';
-
-const paymentHistory = [
-  { id: 'PAY-001', date: '15/03/2026', amount: 5000, method: 'Bank Transfer', status: 'cleared', ref: 'TXN-882341' },
-  { id: 'PAY-002', date: '20/04/2026', amount: 5000, method: 'Bank Transfer', status: 'cleared', ref: 'TXN-893421' },
-  { id: 'PAY-003', date: '10/06/2026', amount: 5000, method: 'Online Portal', status: 'cleared', ref: 'TXN-912341' },
-  { id: 'PAY-004', date: '01/08/2026', amount: 3500, method: 'Online Portal', status: 'cleared', ref: 'TXN-934521' },
-];
 
 function Panel({
   title,
@@ -53,7 +47,7 @@ function InfoRow({ label, value, mono }: { label: string; value: string; mono?: 
   );
 }
 
-export default function PilgrimInfoPanels({ pilgrim: p }: { pilgrim: Pilgrim }) {
+export default function PilgrimInfoPanels({ pilgrim: p, paymentHistory }: { pilgrim: Pilgrim; paymentHistory: PaymentRecord[] }) {
   return (
     <div className="space-y-4">
       {/* Personal Details */}
@@ -176,7 +170,7 @@ export default function PilgrimInfoPanels({ pilgrim: p }: { pilgrim: Pilgrim }) 
             <div className="progress-bar-fill" style={{ width: `${Math.round((p.paymentPaid / p.paymentTotal) * 100)}%` }} />
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {Math.round((p.paymentPaid / p.paymentTotal) * 100)}% — Fully paid
+            {Math.round((p.paymentPaid / p.paymentTotal) * 100)}% — {p.paymentStatus}
           </p>
         </div>
         <div className="overflow-x-auto scrollbar-thin">
@@ -191,14 +185,19 @@ export default function PilgrimInfoPanels({ pilgrim: p }: { pilgrim: Pilgrim }) 
               </tr>
             </thead>
             <tbody>
+              {paymentHistory.length === 0 && (
+                <tr>
+                  <td colSpan={5} className="py-4 text-center text-sm text-muted-foreground">No payments recorded yet.</td>
+                </tr>
+              )}
               {paymentHistory.map((pay) => (
                 <tr key={`pay-${pay.id}`} className="table-row-hover border-b border-border/50 last:border-0">
                   <td className="py-2 text-sm">{pay.date}</td>
                   <td className="py-2 text-sm font-semibold tabular-nums text-[#16A34A]">SAR {pay.amount.toLocaleString()}</td>
                   <td className="py-2 text-sm text-muted-foreground">{pay.method}</td>
-                  <td className="py-2 text-xs font-mono-data text-muted-foreground">{pay.ref}</td>
+                  <td className="py-2 text-xs font-mono-data text-muted-foreground">{pay.reference}</td>
                   <td className="py-2">
-                    <StatusBadge status="approved" size="sm" />
+                    <StatusBadge status={pay.status === 'cleared' ? 'approved' : 'pending'} size="sm" />
                   </td>
                 </tr>
               ))}

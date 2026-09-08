@@ -1,42 +1,22 @@
-'use client';
-
-import React, { useState, useCallback } from 'react';
+import React from 'react';
 import AppLayout from '@/components/AppLayout';
-import PaymentHeader from './components/PaymentHeader';
-import PaymentMetrics from './components/PaymentMetrics';
-import PaymentTable from './components/PaymentTable';
-import PaymentHistory from './components/PaymentHistory';
-import type { PaymentRow } from './paymentRows';
+import PaymentsClient from './PaymentsClient';
+import { getAllPilgrims, getRecentPayments } from '@/lib/data/pilgrims';
+import { getCampaignStats, getMonthlyCollections } from '@/lib/data/campaign';
 
-export default function PaymentsPage() {
-  const [search, setSearch] = useState('');
-  const [filterStatus, setFilterStatus] = useState('all');
-  const [visibleRows, setVisibleRows] = useState<PaymentRow[]>([]);
+export const dynamic = 'force-dynamic';
 
-  const handleVisibleRowsChange = useCallback((rows: PaymentRow[]) => {
-    setVisibleRows(rows);
-  }, []);
+export default async function PaymentsPage() {
+  const [pilgrims, stats, monthlyCollections, recentPayments] = await Promise.all([
+    getAllPilgrims(),
+    getCampaignStats(),
+    getMonthlyCollections(),
+    getRecentPayments(20),
+  ]);
 
   return (
     <AppLayout>
-      <PaymentHeader
-        search={search}
-        filterStatus={filterStatus}
-        onSearchChange={setSearch}
-        onFilterChange={setFilterStatus}
-        exportRows={visibleRows}
-      />
-      <div className="p-6 space-y-6">
-        <PaymentMetrics />
-        <div className="grid grid-cols-1 xl:grid-cols-3 gap-6">
-          <div className="xl:col-span-2">
-            <PaymentTable search={search} filterStatus={filterStatus} onVisibleRowsChange={handleVisibleRowsChange} />
-          </div>
-          <div>
-            <PaymentHistory />
-          </div>
-        </div>
-      </div>
+      <PaymentsClient pilgrims={pilgrims} stats={stats} monthlyCollections={monthlyCollections} recentPayments={recentPayments} />
     </AppLayout>
   );
 }

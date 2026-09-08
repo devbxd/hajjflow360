@@ -2,7 +2,7 @@
 
 import React from 'react';
 import { AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip, ResponsiveContainer } from 'recharts';
-import { registrationTimelineData } from '@/lib/mockData';
+import type { RegistrationMonth } from '@/lib/data/campaign';
 
 const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?: Array<{ value: number }>; label?: string }) => {
   if (active && payload && payload.length) {
@@ -16,10 +16,10 @@ const CustomTooltip = ({ active, payload, label }: { active?: boolean; payload?:
   return null;
 };
 
-export default function RegistrationTimelineChart() {
+export default function RegistrationTimelineChart({ data }: { data: RegistrationMonth[] }) {
   return (
     <ResponsiveContainer width="100%" height={200}>
-      <AreaChart data={registrationTimelineData} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
+      <AreaChart data={data} margin={{ top: 0, right: 0, left: -20, bottom: 0 }}>
         <defs>
           <linearGradient id="regGradient" x1="0" y1="0" x2="0" y2="1">
             <stop offset="5%" stopColor="var(--primary)" stopOpacity={0.25} />
@@ -30,13 +30,7 @@ export default function RegistrationTimelineChart() {
         <XAxis dataKey="month" tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} />
         <YAxis tick={{ fontSize: 10, fill: 'var(--muted-foreground)' }} />
         <Tooltip content={<CustomTooltip />} />
-        <Area
-          type="monotone"
-          dataKey="count"
-          stroke="var(--primary)"
-          strokeWidth={2}
-          fill="url(#regGradient)"
-        />
+        <Area type="monotone" dataKey="count" stroke="var(--primary)" strokeWidth={2} fill="url(#regGradient)" />
       </AreaChart>
     </ResponsiveContainer>
   );

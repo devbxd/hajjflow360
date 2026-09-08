@@ -2,10 +2,11 @@
 
 import React from 'react';
 import { Download, CreditCard, Search } from 'lucide-react';
-import { campaignStats } from '@/lib/mockData';
+import type { CampaignStats } from '@/lib/data/campaign';
 import type { PaymentRow } from '../paymentRows';
 
 interface PaymentHeaderProps {
+  stats: CampaignStats;
   search: string;
   filterStatus: string;
   onSearchChange: (q: string) => void;
@@ -20,8 +21,8 @@ const STATUS_LABEL: Record<PaymentRow['paymentStatus'], string> = {
   pending: 'Pending',
 };
 
-export default function PaymentHeader({ search, filterStatus, onSearchChange, onFilterChange, exportRows }: PaymentHeaderProps) {
-  const collectionRate = Math.round((campaignStats.collectedRevenue / campaignStats.totalRevenue) * 100);
+export default function PaymentHeader({ stats: campaignStats, search, filterStatus, onSearchChange, onFilterChange, exportRows }: PaymentHeaderProps) {
+  const collectionRate = campaignStats.totalRevenue > 0 ? Math.round((campaignStats.collectedRevenue / campaignStats.totalRevenue) * 100) : 0;
 
   const handleExport = () => {
     if (exportRows.length === 0) {
