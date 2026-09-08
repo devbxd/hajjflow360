@@ -8,27 +8,35 @@ import { LayoutDashboard, Users, UserCheck, ChevronLeft, ChevronRight, Plane, Bu
 import Icon from '@/components/ui/AppIcon';
 
 
+interface NavCounts {
+  pilgrimManagement: number;
+  paymentDue: number;
+  emergency: number;
+  notifications: number;
+  totalPilgrims: number;
+}
+
 interface NavItem {
   label: string;
   href: string;
   icon: React.ElementType;
-  badge?: number;
+  badgeKey?: keyof NavCounts;
   group: string;
 }
 
 const navItems: NavItem[] = [
   { label: 'Campaign Dashboard', href: '/', icon: LayoutDashboard, group: 'Overview' },
-  { label: 'Pilgrim Management', href: '/pilgrim-management', icon: Users, badge: 23, group: 'Pilgrims' },
+  { label: 'Pilgrim Management', href: '/pilgrim-management', icon: Users, badgeKey: 'pilgrimManagement', group: 'Pilgrims' },
   { label: 'Pilgrim Profile', href: '/pilgrim-profile/PIL-001', icon: ClipboardList, group: 'Pilgrims' },
   { label: 'Group Leaders', href: '/group-leader-dashboard', icon: UserCheck, group: 'Pilgrims' },
   { label: 'Allocation Management', href: '/allocation-management', icon: Layers, group: 'Logistics' },
   { label: 'Flight Manifests', href: '/allocation-management?tab=flight', icon: Plane, group: 'Logistics' },
   { label: 'Hotel Allocation', href: '/allocation-management?tab=hotel', icon: Building2, group: 'Logistics' },
   { label: 'Bus Seating', href: '/allocation-management?tab=bus', icon: Bus, group: 'Logistics' },
-  { label: 'Payments', href: '/payments', icon: CreditCard, badge: 61, group: 'Operations' },
+  { label: 'Payments', href: '/payments', icon: CreditCard, badgeKey: 'paymentDue', group: 'Operations' },
   { label: 'QR Check-in', href: '/qr-checkin', icon: QrCode, group: 'Operations' },
-  { label: 'Emergency Lists', href: '/emergency-lists', icon: AlertTriangle, badge: 4, group: 'Operations' },
-  { label: 'Notifications', href: '/notifications', icon: Bell, badge: 7, group: 'Operations' },
+  { label: 'Emergency Lists', href: '/emergency-lists', icon: AlertTriangle, badgeKey: 'emergency', group: 'Operations' },
+  { label: 'Notifications', href: '/notifications', icon: Bell, badgeKey: 'notifications', group: 'Operations' },
   { label: 'Settings', href: '/settings', icon: Settings, group: 'System' },
 ];
 
@@ -37,8 +45,16 @@ const groups = ['Overview', 'Pilgrims', 'Logistics', 'Operations', 'System'];
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [displayName, setDisplayName] = useState('...');
+  const [navCounts, setNavCounts] = useState<NavCounts | null>(null);
   const pathname = usePathname();
   const router = useRouter();
+
+  useEffect(() => {
+    fetch('/api/nav-counts')
+      .then((res) => (res.ok ? res.json() : null))
+      .then((data) => data && setNavCounts(data))
+      .catch(() => {});
+  }, [pathname]);
 
   useEffect(() => {
     fetch('/api/auth/me')
@@ -90,7 +106,7 @@ export default function Sidebar() {
         <div className="mx-3 mt-3 px-3 py-2 rounded-lg bg-secondary border border-primary/20">
           <p className="text-xs text-muted-foreground font-medium">Active Campaign</p>
           <p className="text-sm font-semibold text-primary">Hajj 2027</p>
-          <p className="text-xs text-muted-foreground">850 pilgrims · Sep–Oct 2027</p>
+          <p className="text-xs text-muted-foreground">{navCounts?.totalPilgrims ?? '...'} pilgrims · Sep–Oct 2027</p>
         </div>
       )}
 
@@ -117,6 +133,7 @@ export default function Sidebar() {
                   const Icon = item.icon;
                   const itemPath = item.href.split('?')[0];
                   const isActive = pathname === itemPath;
+                  const badge = item.badgeKey && navCounts ? navCounts[item.badgeKey] : undefined;
                   return (
                     <Link
                       key={`nav-${item.label}`}
@@ -128,9 +145,9 @@ export default function Sidebar() {
                       {!collapsed && (
                         <>
                           <span className="flex-1 truncate">{item.label}</span>
-                          {item.badge && (
+                          {Boolean(badge) && (
                             <span className="px-1.5 py-0.5 rounded-full bg-accent/10 text-accent text-xs font-semibold">
-                              {item.badge}
+                              {badge}
                             </span>
                           )}
                         </>
