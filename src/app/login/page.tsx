@@ -40,7 +40,7 @@ export default function LoginPage() {
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-6">
           <AppLogo size={40} />
-          <h1 className="mt-3 text-lg font-semibold text-foreground">HajjFlow360</h1>
+          <h1 className="mt-3 text-lg font-semibold text-foreground">ManasikPro</h1>
           <p className="text-sm text-muted-foreground">Connecte-toi pour accéder au tableau de bord</p>
         </div>
 

@@ -1,4 +1,4 @@
--- HajjFlow360 schema
+-- ManasikPro schema
 -- Run once against the Neon database: npm run db:migrate
 
 CREATE TABLE IF NOT EXISTS staff_users (

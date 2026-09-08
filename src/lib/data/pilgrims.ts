@@ -106,6 +106,74 @@ export async function getPilgrimsByGroup(groupId: string): Promise<Pilgrim[]> {
   return rows.map(mapRow);
 }
 
+export interface NewPilgrimInput {
+  name: string;
+  nationality: string;
+  nationalityCode: string;
+  passportNumber: string;
+  passportExpiry: string;
+  dateOfBirth: string;
+  gender: 'M' | 'F';
+  phone: string;
+  email: string;
+  emergencyContact: string;
+  emergencyPhone: string;
+  groupId: string;
+  paymentTotal: number;
+  fromOcrScan: boolean;
+}
+
+function ageFromDob(dob: string): number {
+  const [day, month, year] = dob.split('/').map(Number);
+  if (!day || !month || !year) return 0;
+  const today = new Date();
+  let age = today.getFullYear() - year;
+  const hadBirthdayThisYear = today.getMonth() + 1 > month || (today.getMonth() + 1 === month && today.getDate() >= day);
+  if (!hadBirthdayThisYear) age--;
+  return Math.max(0, age);
+}
+
+export async function createPilgrim(input: NewPilgrimInput): Promise<string> {
+  const [{ next_seq }] = await query<{ next_seq: string }>(
+    `SELECT COALESCE(MAX(NULLIF(regexp_replace(id, '\\D', '', 'g'), '')::int), 0) + 1 AS next_seq FROM pilgrims`
+  );
+  const id = `PIL-${String(next_seq).padStart(3, '0')}`;
+  const registeredAt = new Date().toISOString().slice(0, 10);
+
+  await query(
+    `INSERT INTO pilgrims (
+       id, name, nationality, nationality_code, passport_number, passport_expiry, passport_status,
+       visa_status, flight_status, group_id, payment_total, payment_status, gender, date_of_birth, age,
+       phone, email, emergency_contact, emergency_phone, attendance_status, registered_at
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
+    [
+      id,
+      input.name,
+      input.nationality,
+      input.nationalityCode,
+      input.passportNumber,
+      input.passportExpiry,
+      input.fromOcrScan ? 'scanned' : 'pending',
+      'not-started',
+      'not-assigned',
+      input.groupId,
+      input.paymentTotal,
+      'pending',
+      input.gender,
+      input.dateOfBirth,
+      ageFromDob(input.dateOfBirth),
+      input.phone,
+      input.email,
+      input.emergencyContact,
+      input.emergencyPhone,
+      'not-checked',
+      registeredAt,
+    ]
+  );
+
+  return id;
+}
+
 export async function deletePilgrim(id: string): Promise<void> {
   await query('DELETE FROM pilgrims WHERE id = $1', [id]);
 }

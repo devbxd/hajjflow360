@@ -1,4 +1,4 @@
-name: HajjFlow360 Build & Test
+name: ManasikPro Build & Test
 
 on:
   push:

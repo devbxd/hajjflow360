@@ -45,7 +45,7 @@ export default function PaymentHeader({ stats: campaignStats, search, filterStat
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'hajjflow360_payments.csv';
+    a.download = 'manasikpro_payments.csv';
     a.click();
     URL.revokeObjectURL(url);
   };

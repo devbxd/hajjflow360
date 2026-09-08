@@ -23,7 +23,7 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: 'HajjFlow360 — Hajj & Umrah Campaign Management',
+  title: 'ManasikPro — Hajj & Umrah Campaign Management',
   description:
     'End-to-end Hajj and Umrah campaign operations — track pilgrims across visa, passport, payment, bus, hotel, and flight logistics from registration to return.',
   icons: {

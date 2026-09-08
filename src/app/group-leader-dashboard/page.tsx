@@ -40,7 +40,7 @@ export default async function GroupLeaderDashboardPage({
         </div>
         <div className="xl:col-span-1 space-y-6">
           <GroupAlertsPanel alerts={alerts} />
-          <WhatsAppPanel pilgrims={pilgrims} />
+          <WhatsAppPanel pilgrims={pilgrims} groupId={groupLeader.groupId} />
         </div>
       </div>
     </AppLayout>

@@ -89,7 +89,7 @@ export default function Sidebar() {
         <div className="flex items-center gap-2 min-w-0">
           <AppLogo size={32} />
           {!collapsed && (
-            <span className="font-semibold text-sm text-foreground truncate">HajjFlow360</span>
+            <span className="font-semibold text-sm text-foreground truncate">ManasikPro</span>
           )}
         </div>
         <button

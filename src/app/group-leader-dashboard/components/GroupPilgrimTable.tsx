@@ -122,9 +122,15 @@ export default function GroupPilgrimTable({ pilgrims, groupId, leaderName }: Gro
                       <Link href={`/pilgrim-profile/${p.id}`} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors">
                         <ExternalLink size={13} />
                       </Link>
-                      <button className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-[#16A34A] transition-colors">
+                      <a
+                        href={`https://wa.me/${p.phone.replace(/[^\d]/g, '')}`}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-[#16A34A] transition-colors"
+                        title="Open WhatsApp"
+                      >
                         <MessageSquare size={13} />
-                      </button>
+                      </a>
                     </div>
                   </td>
                 </tr>

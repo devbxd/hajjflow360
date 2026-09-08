@@ -31,7 +31,7 @@ export default function CampaignHeader({ stats, pilgrims }: CampaignHeaderProps)
     const url = URL.createObjectURL(blob);
     const a = document.createElement('a');
     a.href = url;
-    a.download = 'hajjflow360_campaign_report.csv';
+    a.download = 'manasikpro_campaign_report.csv';
     a.click();
     URL.revokeObjectURL(url);
   };

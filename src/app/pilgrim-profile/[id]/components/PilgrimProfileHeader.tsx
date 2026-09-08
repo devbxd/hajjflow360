@@ -41,10 +41,15 @@ export default function PilgrimProfileHeader({ pilgrim: p }: { pilgrim: Pilgrim 
                 </div>
               </div>
               <div className="flex items-center gap-2 flex-shrink-0">
-                <button className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5">
+                <a
+                  href={`https://wa.me/${p.phone.replace(/[^\d]/g, '')}?text=${encodeURIComponent(`Assalamu Alaikum ${p.name.split(' ')[0]}, `)}`}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5"
+                >
                   <MessageSquare size={13} />
                   WhatsApp
-                </button>
+                </a>
                 <button className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5">
                   <Printer size={13} />
                   Print

@@ -1,4 +1,4 @@
-import { query } from '@/lib/db';
+import { query, pool } from '@/lib/db';
 
 export interface HotelRow {
   id: string;
@@ -109,4 +109,157 @@ export async function getFlights(): Promise<FlightRow[]> {
     confirmed: Number(r.confirmed),
     status: r.status,
   }));
+}
+
+const SEAT_ROWS = ['A', 'B', 'C', 'D', 'E'];
+const SEAT_COLS = 10;
+
+function seatLabelForIndex(index: number): string {
+  const row = SEAT_ROWS[Math.floor(index / SEAT_COLS) % SEAT_ROWS.length];
+  const col = (index % SEAT_COLS) + 1;
+  return `${row}${col}`;
+}
+
+export interface AutoAssignResult {
+  busesAssigned: number;
+  roomsAssigned: number;
+}
+
+// Greedy real assignment: pilgrims missing a bus/room get placed into actual
+// remaining capacity, keeping each pilgrim's group together where a single
+// bus/hotel has room for the whole group. Runs as one transaction so a
+// failure partway through doesn't leave a half-updated allocation.
+export async function autoAssignRemaining(): Promise<AutoAssignResult> {
+  const client = await pool.connect();
+  let busesAssigned = 0;
+  let roomsAssigned = 0;
+
+  try {
+    await client.query('BEGIN');
+
+    // --- Buses ---
+    const buses = (
+      await client.query<{ number: number; capacity: number; allocated: string }>(`
+        SELECT b.number, b.capacity, COUNT(p.id) AS allocated
+        FROM buses b
+        LEFT JOIN pilgrims p ON p.bus_number = b.number
+        GROUP BY b.number, b.capacity
+        ORDER BY b.number
+      `)
+    ).rows.map((r) => ({ number: r.number, capacity: r.capacity, allocated: Number(r.allocated) }));
+
+    const unassignedForBus = (
+      await client.query<{ id: string; group_id: string }>(
+        `SELECT id, group_id FROM pilgrims WHERE bus_number IS NULL ORDER BY group_id, id`
+      )
+    ).rows;
+
+    // Track which bus each group has already been placed on, to keep groups together.
+    const groupBus = new Map<string, number>();
+
+    for (const pilgrim of unassignedForBus) {
+      let targetBus = groupBus.get(pilgrim.group_id);
+      const busHasRoom = (busNumber: number | undefined) => {
+        if (busNumber === undefined) return false;
+        const bus = buses.find((b) => b.number === busNumber);
+        return Boolean(bus && bus.allocated < bus.capacity);
+      };
+
+      if (!busHasRoom(targetBus)) {
+        const candidate = buses.find((b) => b.allocated < b.capacity);
+        if (!candidate) continue; // fleet is full
+        targetBus = candidate.number;
+        groupBus.set(pilgrim.group_id, targetBus);
+      }
+
+      const bus = buses.find((b) => b.number === targetBus)!;
+      const seat = seatLabelForIndex(bus.allocated);
+      bus.allocated += 1;
+
+      await client.query('UPDATE pilgrims SET bus_number = $2, seat_number = $3 WHERE id = $1', [
+        pilgrim.id,
+        targetBus,
+        seat,
+      ]);
+      busesAssigned++;
+    }
+
+    // --- Hotel rooms (Makkah leg only — hotel_madinah stays a manual step) ---
+    const hotels = (
+      await client.query<{ name: string; total_rooms: number; allocated_rooms: string }>(`
+        SELECT h.name, h.total_rooms,
+          COUNT(DISTINCT p.room_number) FILTER (WHERE p.room_number IS NOT NULL) AS allocated_rooms
+        FROM hotels h
+        LEFT JOIN pilgrims p ON p.hotel_makkah = h.name
+        WHERE h.city = 'Makkah'
+        GROUP BY h.name, h.total_rooms
+        ORDER BY h.name
+      `)
+    ).rows.map((r) => ({ name: r.name, totalRooms: r.total_rooms, allocatedRooms: Number(r.allocated_rooms) }));
+
+    const usedRoomNumbers = new Set(
+      (await client.query<{ room_number: string }>(`SELECT DISTINCT room_number FROM pilgrims WHERE room_number IS NOT NULL`)).rows.map(
+        (r) => r.room_number
+      )
+    );
+    let nextRoomSeq = 901;
+    function nextRoomNumber(): string {
+      while (usedRoomNumbers.has(String(nextRoomSeq))) nextRoomSeq++;
+      const room = String(nextRoomSeq);
+      usedRoomNumbers.add(room);
+      nextRoomSeq++;
+      return room;
+    }
+
+    const unassignedForRoom = (
+      await client.query<{ id: string; group_id: string; gender: string; hotel_makkah: string | null }>(
+        `SELECT id, group_id, gender, hotel_makkah FROM pilgrims WHERE room_number IS NULL ORDER BY group_id, id`
+      )
+    ).rows;
+
+    // Bucket by (hotel, group, gender) — same-gender roommates, same group where possible.
+    const buckets = new Map<string, { hotel: string; roomType: 'single' | 'double' | 'triple' | 'quad'; roomNumber: string; count: number }>();
+
+    for (const pilgrim of unassignedForRoom) {
+      let hotelName = pilgrim.hotel_makkah;
+      if (!hotelName || !hotels.some((h) => h.name === hotelName)) {
+        const candidate = hotels.filter((h) => h.allocatedRooms < h.totalRooms).sort((a, b) => a.allocatedRooms - b.allocatedRooms)[0];
+        if (!candidate) continue; // every hotel full
+        hotelName = candidate.name;
+      }
+
+      const bucketKey = `${hotelName}::${pilgrim.group_id}::${pilgrim.gender}`;
+      let bucket = buckets.get(bucketKey);
+      if (!bucket || bucket.count >= 4) {
+        bucket = { hotel: hotelName, roomType: 'quad', roomNumber: nextRoomNumber(), count: 0 };
+        buckets.set(bucketKey, bucket);
+        const hotel = hotels.find((h) => h.name === hotelName);
+        if (hotel) hotel.allocatedRooms += 1;
+      }
+      bucket.count += 1;
+      bucket.roomType = bucket.count === 1 ? 'single' : bucket.count === 2 ? 'double' : bucket.count === 3 ? 'triple' : 'quad';
+
+      await client.query('UPDATE pilgrims SET hotel_makkah = $2, room_number = $3, room_type = $4 WHERE id = $1', [
+        pilgrim.id,
+        bucket.hotel,
+        bucket.roomNumber,
+        bucket.roomType,
+      ]);
+      roomsAssigned++;
+    }
+
+    await client.query(
+      `INSERT INTO activity_log (type, message, icon) VALUES ($1, $2, $3)`,
+      ['allocation', `Auto-assign: ${busesAssigned} pilgrims placed on buses, ${roomsAssigned} placed in hotel rooms`, 'bus']
+    );
+
+    await client.query('COMMIT');
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
+
+  return { busesAssigned, roomsAssigned };
 }

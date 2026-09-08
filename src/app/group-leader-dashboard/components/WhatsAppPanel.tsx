@@ -1,29 +1,42 @@
 'use client';
 
 import React, { useState } from 'react';
-import { MessageSquare, Send, Users, CheckCheck } from 'lucide-react';
+import { MessageSquare, Users, ExternalLink } from 'lucide-react';
 import { toast } from 'sonner';
 import type { Pilgrim } from '@/lib/mockData';
 
 const templates = [
-  { id: 'tpl-passport', label: 'Passport Reminder', body: 'Dear pilgrim, please submit your passport scan to the campaign office by 10/09/2027. Failure to do so may delay your visa. JazakAllah khair.' },
-  { id: 'tpl-payment', label: 'Payment Due', body: 'Assalamu Alaikum. Your Hajj 2027 package has an outstanding balance. Please complete your payment before 12/09/2027. Contact us for assistance.' },
-  { id: 'tpl-departure', label: 'Departure Notice', body: 'Important: Your departure is scheduled for 15/09/2027. Please arrive at the assembly point by 04:00 AM. Bring your passport, visa, and all luggage.' },
+  { id: 'tpl-passport', label: 'Passport Reminder', body: 'Dear {name}, please submit your passport scan to the campaign office by 10/09/2027. Failure to do so may delay your visa. JazakAllah khair.' },
+  { id: 'tpl-payment', label: 'Payment Due', body: 'Assalamu Alaikum {name}. Your Hajj 2027 package has an outstanding balance. Please complete your payment before 12/09/2027. Contact us for assistance.' },
+  { id: 'tpl-departure', label: 'Departure Notice', body: 'Important {name}: Your departure is scheduled for 15/09/2027. Please arrive at the assembly point by 04:00 AM. Bring your passport, visa, and all luggage.' },
   { id: 'tpl-general', label: 'General Update', body: '' },
 ];
 
-export default function WhatsAppPanel({ pilgrims }: { pilgrims: Pilgrim[] }) {
+function toWhatsAppNumber(phone: string): string {
+  return phone.replace(/[^\d]/g, '');
+}
+
+export default function WhatsAppPanel({ pilgrims, groupId }: { pilgrims: Pilgrim[]; groupId: string }) {
   const [selectedTemplate, setSelectedTemplate] = useState('tpl-general');
   const [message, setMessage] = useState('');
-  const [sending, setSending] = useState(false);
   const [recipient, setRecipient] = useState<'all' | 'pending-visa' | 'pending-payment' | 'absent'>('all');
+  const [sentTo, setSentTo] = useState<Set<string>>(new Set());
+
+  const filteredPilgrims = {
+    all: pilgrims,
+    'pending-visa': pilgrims.filter((p) => p.visaStatus === 'pending' || p.visaStatus === 'processing' || p.visaStatus === 'not-started'),
+    'pending-payment': pilgrims.filter((p) => p.paymentStatus === 'partial' || p.paymentStatus === 'overdue' || p.paymentStatus === 'pending'),
+    absent: pilgrims.filter((p) => p.attendanceStatus === 'absent'),
+  };
 
   const recipientCounts: Record<typeof recipient, number> = {
-    all: pilgrims.length,
-    'pending-visa': pilgrims.filter((p) => p.visaStatus === 'pending' || p.visaStatus === 'processing' || p.visaStatus === 'not-started').length,
-    'pending-payment': pilgrims.filter((p) => p.paymentStatus === 'partial' || p.paymentStatus === 'overdue' || p.paymentStatus === 'pending').length,
-    absent: pilgrims.filter((p) => p.attendanceStatus === 'absent').length,
+    all: filteredPilgrims.all.length,
+    'pending-visa': filteredPilgrims['pending-visa'].length,
+    'pending-payment': filteredPilgrims['pending-payment'].length,
+    absent: filteredPilgrims.absent.length,
   };
+
+  const visibleList = filteredPilgrims[recipient];
 
   const handleTemplateChange = (id: string) => {
     setSelectedTemplate(id);
@@ -31,18 +44,34 @@ export default function WhatsAppPanel({ pilgrims }: { pilgrims: Pilgrim[] }) {
     if (tpl) setMessage(tpl.body);
   };
 
-  const handleSend = () => {
+  const handleOpenWhatsApp = async (pilgrim: Pilgrim) => {
     if (!message.trim()) {
       toast.error('Message cannot be empty');
       return;
     }
-    setSending(true);
-    // Backend integration point: POST /api/whatsapp/broadcast with { groupId, recipientFilter, message }
-    setTimeout(() => {
-      setSending(false);
-      toast.success(`WhatsApp sent to ${recipientCounts[recipient]} pilgrims`);
-      setMessage('');
-    }, 1800);
+    const number = toWhatsAppNumber(pilgrim.phone);
+    if (!number) {
+      toast.error(`${pilgrim.name} has no usable phone number.`);
+      return;
+    }
+    const personalized = message.replaceAll('{name}', pilgrim.name.split(' ')[0]);
+    const url = `https://wa.me/${number}?text=${encodeURIComponent(personalized)}`;
+    window.open(url, '_blank', 'noopener,noreferrer');
+    setSentTo((prev) => new Set(prev).add(pilgrim.id));
+
+    try {
+      await fetch('/api/activity', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'whatsapp',
+          message: `WhatsApp opened for ${pilgrim.name} (${pilgrim.id}) — ${groupId}`,
+          icon: 'message',
+        }),
+      });
+    } catch {
+      // Non-critical — the WhatsApp chat already opened regardless.
+    }
   };
 
   return (
@@ -51,13 +80,17 @@ export default function WhatsAppPanel({ pilgrims }: { pilgrims: Pilgrim[] }) {
         <div className="p-1.5 rounded-lg bg-[#F0FDF4]">
           <MessageSquare size={14} className="text-[#16A34A]" />
         </div>
-        <h3 className="text-sm font-semibold text-foreground">WhatsApp Broadcast</h3>
+        <h3 className="text-sm font-semibold text-foreground">WhatsApp</h3>
       </div>
+
+      <p className="text-xs text-muted-foreground mb-3">
+        WhatsApp doesn't allow sending one message to many numbers at once from a website. Pick a recipient below and it opens WhatsApp (app or web) with the chat and message ready — you just hit send yourself.
+      </p>
 
       {/* Recipient Filter */}
       <div className="mb-3">
         <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5">
-          Send To
+          Filter
         </label>
         <div className="grid grid-cols-2 gap-1.5">
           {(Object.entries(recipientCounts) as [typeof recipient, number][]).map(([key, count]) => (
@@ -82,7 +115,7 @@ export default function WhatsAppPanel({ pilgrims }: { pilgrims: Pilgrim[] }) {
       {/* Template Selector */}
       <div className="mb-3">
         <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5">
-          Template
+          Template <span className="normal-case font-normal">(use {'{name}'} to personalize)</span>
         </label>
         <select
           value={selectedTemplate}
@@ -110,40 +143,30 @@ export default function WhatsAppPanel({ pilgrims }: { pilgrims: Pilgrim[] }) {
         <p className="text-xs text-muted-foreground mt-1">{message.length} characters</p>
       </div>
 
-      <button
-        onClick={handleSend}
-        disabled={sending}
-        className="btn-primary w-full justify-center text-sm"
-        style={{ opacity: sending ? 0.7 : 1 }}
-      >
-        {sending ? (
-          <>
-            <span className="animate-spin inline-block w-3.5 h-3.5 border-2 border-white/40 border-t-white rounded-full" />
-            Sending...
-          </>
-        ) : (
-          <>
-            <Send size={13} />
-            Send to {recipientCounts[recipient]} pilgrims
-          </>
-        )}
-      </button>
-
-      {/* Sent History */}
-      <div className="mt-4 pt-4 border-t border-border">
-        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Recent Broadcasts</p>
-        <div className="space-y-2">
-          {[
-            { msg: 'Departure notice sent to all 47 pilgrims', time: '4 hr ago', delivered: 45 },
-            { msg: 'Passport reminder sent to 3 pilgrims', time: '1 day ago', delivered: 3 },
-            { msg: 'Payment reminder sent to 9 pilgrims', time: '2 days ago', delivered: 8 },
-          ].map((item, idx) => (
-            <div key={`wh-${idx}`} className="flex items-start gap-2">
-              <CheckCheck size={13} className="text-[#16A34A] flex-shrink-0 mt-0.5" />
-              <div className="flex-1 min-w-0">
-                <p className="text-xs text-foreground truncate">{item.msg}</p>
-                <p className="text-xs text-muted-foreground">{item.time} · {item.delivered} delivered</p>
+      {/* Recipient list — one real WhatsApp link per pilgrim */}
+      <div className="border-t border-border pt-3">
+        <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">
+          {visibleList.length} recipient{visibleList.length === 1 ? '' : 's'}
+        </p>
+        <div className="space-y-1.5 max-h-64 overflow-y-auto scrollbar-thin pr-1">
+          {visibleList.length === 0 && (
+            <p className="text-xs text-muted-foreground">No pilgrims match this filter.</p>
+          )}
+          {visibleList.map((p) => (
+            <div key={p.id} className="flex items-center justify-between gap-2 p-2 rounded-lg bg-muted/40">
+              <div className="min-w-0">
+                <p className="text-xs font-medium text-foreground truncate">{p.name}</p>
+                <p className="text-xs text-muted-foreground font-mono-data">{p.phone}</p>
               </div>
+              <button
+                onClick={() => handleOpenWhatsApp(p)}
+                className={`flex items-center gap-1 px-2 py-1 rounded text-xs font-medium flex-shrink-0 transition-colors ${
+                  sentTo.has(p.id) ? 'bg-[#F0FDF4] text-[#16A34A]' : 'bg-[#16A34A] text-white hover:bg-[#15803D]'
+                }`}
+              >
+                <ExternalLink size={11} />
+                {sentTo.has(p.id) ? 'Opened' : 'WhatsApp'}
+              </button>
             </div>
           ))}
         </div>
