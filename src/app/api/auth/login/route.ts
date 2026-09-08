@@ -8,17 +8,17 @@ export async function POST(req: NextRequest) {
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'Requête invalide.' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   }
 
   const { username, password } = body;
   if (!username || !password) {
-    return NextResponse.json({ error: 'Identifiant et mot de passe requis.' }, { status: 400 });
+    return NextResponse.json({ error: 'Username and password are required.' }, { status: 400 });
   }
 
   const user = await findUser(username);
   if (!user || !bcrypt.compareSync(password, user.passwordHash)) {
-    return NextResponse.json({ error: 'Identifiant ou mot de passe incorrect.' }, { status: 401 });
+    return NextResponse.json({ error: 'Incorrect username or password.' }, { status: 401 });
   }
 
   const token = await createSessionToken({ username: user.username, displayName: user.displayName });

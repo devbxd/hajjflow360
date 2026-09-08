@@ -6,19 +6,19 @@ import { logActivity } from '@/lib/data/activity';
 export async function POST(req: NextRequest) {
   const session = await getCurrentUser();
   if (!session) {
-    return NextResponse.json({ error: 'Non authentifié.' }, { status: 401 });
+    return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
   }
 
   let body: { ids?: string[] };
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'Requête invalide.' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   }
 
   const ids = body.ids;
   if (!Array.isArray(ids) || ids.length === 0) {
-    return NextResponse.json({ error: 'Aucun identifiant fourni.' }, { status: 400 });
+    return NextResponse.json({ error: 'No ids provided.' }, { status: 400 });
   }
 
   await deletePilgrims(ids);

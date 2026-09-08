@@ -11,23 +11,23 @@ const REQUIRED_FIELDS: (keyof NewPilgrimInput)[] = [
 export async function POST(req: NextRequest) {
   const session = await getCurrentUser();
   if (!session) {
-    return NextResponse.json({ error: 'Non authentifié.' }, { status: 401 });
+    return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
   }
 
   let body: Partial<NewPilgrimInput>;
   try {
     body = await req.json();
   } catch {
-    return NextResponse.json({ error: 'Requête invalide.' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid request.' }, { status: 400 });
   }
 
   for (const field of REQUIRED_FIELDS) {
     if (!body[field]) {
-      return NextResponse.json({ error: `Champ manquant : ${field}` }, { status: 400 });
+      return NextResponse.json({ error: `Missing field: ${field}` }, { status: 400 });
     }
   }
   if (body.gender !== 'M' && body.gender !== 'F') {
-    return NextResponse.json({ error: 'Genre invalide.' }, { status: 400 });
+    return NextResponse.json({ error: 'Invalid gender.' }, { status: 400 });
   }
 
   const input: NewPilgrimInput = {

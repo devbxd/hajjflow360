@@ -6,13 +6,13 @@ import { logActivity } from '@/lib/data/activity';
 export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ id: string }> }) {
   const session = await getCurrentUser();
   if (!session) {
-    return NextResponse.json({ error: 'Non authentifié.' }, { status: 401 });
+    return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
   }
 
   const { id } = await params;
   const pilgrim = await getPilgrimById(id);
   if (!pilgrim) {
-    return NextResponse.json({ error: 'Pèlerin introuvable.' }, { status: 404 });
+    return NextResponse.json({ error: 'Pilgrim not found.' }, { status: 404 });
   }
 
   await deletePilgrim(id);

@@ -2,7 +2,7 @@ import React from 'react';
 import Link from 'next/link';
 import Image from 'next/image';
 import {
-  Users, ScanLine, MessageSquare, CreditCard, Bus, Building2,
+  Users, ScanLine, MessageSquare, CreditCard, Bus,
   AlertTriangle, LayoutDashboard, ShieldCheck, Smartphone,
 } from 'lucide-react';
 
@@ -11,53 +11,53 @@ export const dynamic = 'force-static';
 const features = [
   {
     icon: LayoutDashboard,
-    title: 'Vue d’ensemble en temps réel',
-    desc: 'Un seul écran pour voir combien de pèlerins sont inscrits, combien de visas sont approuvés, combien d’argent est encaissé, et qui est à risque avant qu’il ne soit trop tard.',
+    title: 'Real-time overview',
+    desc: 'One screen to see how many pilgrims are registered, how many visas are approved, how much revenue has been collected, and who is at risk before it’s too late.',
   },
   {
     icon: Users,
-    title: 'Gestion complète des pèlerins',
-    desc: 'Fiche par fiche : passeport, visa, vol, hôtel, bus, paiement, contact d’urgence. Recherche, filtres, export en un clic.',
+    title: 'Complete pilgrim management',
+    desc: 'One profile per pilgrim: passport, visa, flight, hotel, bus, payment, emergency contact. Search, filter, and export in one click.',
   },
   {
     icon: ScanLine,
-    title: 'Scan de passeport automatique',
-    desc: 'Prends une photo du passeport, l’app lit la bande MRZ et pré-remplit la fiche du pèlerin. Le staff vérifie et valide.',
+    title: 'Automatic passport scanning',
+    desc: 'Take a photo of the passport and the app reads the MRZ strip to pre-fill the pilgrim’s record. Staff review and confirm before saving.',
   },
   {
     icon: Bus,
-    title: 'Auto-assignation bus & hôtel',
-    desc: 'Un bouton répartit automatiquement les pèlerins non affectés sur les bus et dans les chambres d’hôtel disponibles, en gardant les groupes ensemble.',
+    title: 'Auto-assign buses & hotel rooms',
+    desc: 'One button places every unassigned pilgrim into available bus seats and hotel rooms, keeping each group together wherever possible.',
   },
   {
     icon: MessageSquare,
-    title: 'Contact WhatsApp direct',
-    desc: 'Ouvre WhatsApp avec le bon numéro et un message déjà rédigé pour chaque pèlerin — rappels de paiement, de passeport, de départ.',
+    title: 'Direct WhatsApp contact',
+    desc: 'Opens WhatsApp with the right number and a message already drafted for each pilgrim — payment reminders, passport requests, departure notices.',
   },
   {
     icon: CreditCard,
-    title: 'Suivi des paiements',
-    desc: 'Qui a payé, combien il reste, qui est en retard. Historique complet des transactions, export CSV.',
+    title: 'Payment tracking',
+    desc: 'Who has paid, what’s outstanding, who’s overdue. Full transaction history, CSV export.',
   },
   {
     icon: AlertTriangle,
-    title: 'Alertes automatiques',
-    desc: 'Passeport manquant, visa refusé, paiement en retard, pas de bus assigné : la liste des cas urgents se construit toute seule, à partir des vraies données.',
+    title: 'Automatic alerts',
+    desc: 'Missing passport, rejected visa, overdue payment, no bus assigned: the list of urgent cases builds itself from real data.',
   },
   {
     icon: ShieldCheck,
-    title: 'Accès sécurisé multi-utilisateurs',
-    desc: 'Plusieurs membres du staff, chacun avec son propre identifiant, mots de passe protégés — personne d’autre ne peut voir les données.',
+    title: 'Secure multi-user access',
+    desc: 'Multiple staff members, each with their own login, passwords protected — nobody outside the team can see the data.',
   },
 ];
 
 const screenshots = [
-  { src: '/showcase/dashboard.png', alt: 'Tableau de bord de la campagne', label: 'Tableau de bord' },
-  { src: '/showcase/pilgrim-management.png', alt: 'Gestion des pèlerins', label: 'Gestion des pèlerins' },
-  { src: '/showcase/payments.png', alt: 'Suivi des paiements', label: 'Paiements' },
-  { src: '/showcase/group-leader.png', alt: 'Tableau de bord du chef de groupe', label: 'Chefs de groupe' },
-  { src: '/showcase/allocation.png', alt: 'Allocation bus et hôtels', label: 'Bus & hôtels' },
-  { src: '/showcase/login.png', alt: 'Page de connexion sécurisée', label: 'Connexion sécurisée' },
+  { src: '/showcase/dashboard.png', alt: 'Campaign dashboard', label: 'Dashboard' },
+  { src: '/showcase/pilgrim-management.png', alt: 'Pilgrim management', label: 'Pilgrim management' },
+  { src: '/showcase/payments.png', alt: 'Payment tracking', label: 'Payments' },
+  { src: '/showcase/group-leader.png', alt: 'Group leader dashboard', label: 'Group leaders' },
+  { src: '/showcase/allocation.png', alt: 'Bus and hotel allocation', label: 'Buses & hotels' },
+  { src: '/showcase/login.png', alt: 'Secure login page', label: 'Secure login' },
 ];
 
 export default function ShowcasePage() {
@@ -67,21 +67,21 @@ export default function ShowcasePage() {
       <section style={{ padding: '72px 24px 56px', textAlign: 'center', maxWidth: 780, margin: '0 auto' }}>
         <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8, padding: '6px 14px', borderRadius: 999, background: '#EDE9E3', color: '#6B6560', fontSize: 13, fontWeight: 600, marginBottom: 24 }}>
           <Smartphone size={14} />
-          Logiciel de gestion Hajj &amp; Omra
+          Hajj &amp; Umrah campaign management software
         </div>
         <h1 style={{ fontSize: 40, fontWeight: 700, color: '#1F1B16', margin: '0 0 16px', lineHeight: 1.15 }}>
           ManasikPro
         </h1>
         <p style={{ fontSize: 18, color: '#4A443C', lineHeight: 1.6, margin: '0 0 32px' }}>
-          Toute la logistique d’une campagne Hajj ou Omra — pèlerins, visas, passeports, paiements, bus, hôtels
-          et vols — pilotée depuis un seul tableau de bord. Fini les fichiers Excel éparpillés et les messages
-          WhatsApp perdus.
+          Every piece of logistics for a Hajj or Umrah campaign — pilgrims, visas, passports, payments, buses,
+          hotels and flights — run from a single dashboard. No more scattered spreadsheets and lost WhatsApp
+          messages.
         </p>
         <Link
           href="/login"
           style={{ display: 'inline-block', padding: '12px 28px', borderRadius: 10, background: '#1B6B4A', color: 'white', fontWeight: 600, textDecoration: 'none', fontSize: 15 }}
         >
-          Se connecter au tableau de bord
+          Sign in to the dashboard
         </Link>
       </section>
 
@@ -100,14 +100,13 @@ export default function ShowcasePage() {
       {/* What it's for / pitch */}
       <section style={{ maxWidth: 900, margin: '0 auto', padding: '0 24px 64px' }}>
         <h2 style={{ fontSize: 26, fontWeight: 700, color: '#1F1B16', textAlign: 'center', margin: '0 0 12px' }}>
-          À quoi ça sert ?
+          What is it for?
         </h2>
         <p style={{ fontSize: 15, color: '#4A443C', lineHeight: 1.7, textAlign: 'center', maxWidth: 680, margin: '0 auto 40px' }}>
-          Organiser un Hajj ou une Omra pour des centaines de personnes veut dire suivre en parallèle des dizaines
-          de statuts par pèlerin — passeport, visa, vol, chambre, bus, paiement — sans qu’un seul ne passe entre les
-          mailles du filet. ManasikPro remplace les fichiers Excel, les groupes WhatsApp et les carnets papier par
-          un seul système que toute l’équipe utilise en même temps, avec les mêmes informations à jour pour tout le
-          monde.
+          Organizing a Hajj or Umrah trip for hundreds of people means tracking dozens of statuses per pilgrim at
+          once — passport, visa, flight, room, bus, payment — without a single one slipping through the
+          cracks. ManasikPro replaces spreadsheets, WhatsApp groups, and paper notebooks with one system the whole
+          team uses at the same time, with the same up-to-date information for everyone.
         </p>
 
         <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(260px, 1fr))', gap: 20 }}>
@@ -132,7 +131,7 @@ export default function ShowcasePage() {
           href="/login"
           style={{ display: 'inline-block', padding: '12px 28px', borderRadius: 10, background: '#1B6B4A', color: 'white', fontWeight: 600, textDecoration: 'none', fontSize: 15 }}
         >
-          Accéder à l’application
+          Open the app
         </Link>
       </section>
     </div>

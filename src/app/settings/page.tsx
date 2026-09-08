@@ -28,7 +28,7 @@ export default function SettingsPage() {
   const handleChangePassword = async (e: React.FormEvent) => {
     e.preventDefault();
     if (newPassword !== confirmPassword) {
-      toast.error('La confirmation ne correspond pas au nouveau mot de passe.');
+      toast.error("Confirmation doesn't match the new password.");
       return;
     }
     setSaving(true);
@@ -40,15 +40,15 @@ export default function SettingsPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        toast.error(data.error || 'Impossible de changer le mot de passe.');
+        toast.error(data.error || 'Unable to change the password.');
         return;
       }
-      toast.success('Mot de passe mis à jour.');
+      toast.success('Password updated.');
       setCurrentPassword('');
       setNewPassword('');
       setConfirmPassword('');
     } catch {
-      toast.error('Erreur réseau. Réessaie.');
+      toast.error('Network error. Please try again.');
     } finally {
       setSaving(false);
     }

@@ -2,7 +2,6 @@
 
 import React, { useState } from 'react';
 import { useRouter } from 'next/navigation';
-import AppLogo from '@/components/ui/AppLogo';
 
 export default function LoginPage() {
   const router = useRouter();
@@ -23,14 +22,14 @@ export default function LoginPage() {
       });
       const data = await res.json();
       if (!res.ok) {
-        setError(data.error || 'Connexion impossible.');
+        setError(data.error || 'Unable to sign in.');
         setLoading(false);
         return;
       }
       router.replace('/');
       router.refresh();
     } catch {
-      setError('Erreur réseau. Réessaie.');
+      setError('Network error. Please try again.');
       setLoading(false);
     }
   };
@@ -39,15 +38,14 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-6">
-          <AppLogo size={40} />
-          <h1 className="mt-3 text-lg font-semibold text-foreground">ManasikPro</h1>
-          <p className="text-sm text-muted-foreground">Connecte-toi pour accéder au tableau de bord</p>
+          <h1 className="text-lg font-semibold text-foreground">ManasikPro</h1>
+          <p className="text-sm text-muted-foreground">Sign in to access the dashboard</p>
         </div>
 
         <form onSubmit={handleSubmit} className="card-base space-y-4">
           <div>
             <label htmlFor="username" className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5">
-              Identifiant
+              Username
             </label>
             <input
               id="username"
@@ -62,7 +60,7 @@ export default function LoginPage() {
 
           <div>
             <label htmlFor="password" className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1.5">
-              Mot de passe
+              Password
             </label>
             <input
               id="password"
@@ -82,7 +80,7 @@ export default function LoginPage() {
           )}
 
           <button type="submit" disabled={loading} className="btn-primary w-full justify-center text-sm" style={{ opacity: loading ? 0.7 : 1 }}>
-            {loading ? 'Connexion...' : 'Se connecter'}
+            {loading ? 'Signing in...' : 'Sign In'}
           </button>
         </form>
       </div>

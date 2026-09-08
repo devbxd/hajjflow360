@@ -3,7 +3,6 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import AppLogo from '@/components/ui/AppLogo';
 import { LayoutDashboard, Users, UserCheck, ChevronLeft, ChevronRight, Plane, Building2, Bus, QrCode, Bell, Settings, LogOut, AlertTriangle, ClipboardList, Layers, CreditCard } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
 
@@ -87,7 +86,9 @@ export default function Sidebar() {
       {/* Logo */}
       <div className={`flex items-center border-b border-border px-3 py-3 ${collapsed ? 'justify-center' : 'justify-between'}`}>
         <div className="flex items-center gap-2 min-w-0">
-          <AppLogo size={32} />
+          <div className="w-8 h-8 rounded-lg bg-primary flex items-center justify-center flex-shrink-0">
+            <span className="text-sm font-bold text-primary-foreground">M</span>
+          </div>
           {!collapsed && (
             <span className="font-semibold text-sm text-foreground truncate">ManasikPro</span>
           )}
