@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, UserCheck, ChevronLeft, ChevronRight, Plane, Building2, Bus, QrCode, Bell, Settings, LogOut, AlertTriangle, ClipboardList, Layers, CreditCard } from 'lucide-react';
+import { LayoutDashboard, Users, UserCheck, ChevronLeft, ChevronRight, Plane, Building2, Bus, QrCode, Bell, Settings, LogOut, AlertTriangle, ClipboardList, Layers, CreditCard, ScanLine, BookOpen, Receipt, TrendingUp, FileBarChart } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
 
 
@@ -27,7 +27,9 @@ const navItems: NavItem[] = [
   { label: 'Campaign Dashboard', href: '/', icon: LayoutDashboard, group: 'Overview' },
   { label: 'Pilgrim Management', href: '/pilgrim-management', icon: Users, badgeKey: 'pilgrimManagement', group: 'Pilgrims' },
   { label: 'Pilgrim Profile', href: '/pilgrim-profile/PIL-001', icon: ClipboardList, group: 'Pilgrims' },
+  { label: 'Pilgrim Registry', href: '/pilgrim-registry', icon: BookOpen, group: 'Pilgrims' },
   { label: 'Group Leaders', href: '/group-leader-dashboard', icon: UserCheck, group: 'Pilgrims' },
+  { label: 'Passport Scanning', href: '/passport-scanning', icon: ScanLine, group: 'Pilgrims' },
   { label: 'Allocation Management', href: '/allocation-management', icon: Layers, group: 'Logistics' },
   { label: 'Flight Manifests', href: '/allocation-management?tab=flight', icon: Plane, group: 'Logistics' },
   { label: 'Hotel Allocation', href: '/allocation-management?tab=hotel', icon: Building2, group: 'Logistics' },
@@ -36,10 +38,13 @@ const navItems: NavItem[] = [
   { label: 'QR Check-in', href: '/qr-checkin', icon: QrCode, group: 'Operations' },
   { label: 'Emergency Lists', href: '/emergency-lists', icon: AlertTriangle, badgeKey: 'emergency', group: 'Operations' },
   { label: 'Notifications', href: '/notifications', icon: Bell, badgeKey: 'notifications', group: 'Operations' },
+  { label: 'Invoicing & Receipts', href: '/invoicing-receipts', icon: Receipt, group: 'Finance' },
+  { label: 'Revenue & Expenses', href: '/revenue-expenses', icon: TrendingUp, group: 'Finance' },
+  { label: 'Reports & Export', href: '/reports-export', icon: FileBarChart, group: 'Finance' },
   { label: 'Settings', href: '/settings', icon: Settings, group: 'System' },
 ];
 
-const groups = ['Overview', 'Pilgrims', 'Logistics', 'Operations', 'System'];
+const groups = ['Overview', 'Pilgrims', 'Logistics', 'Operations', 'Finance', 'System'];
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);

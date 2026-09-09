@@ -13,7 +13,7 @@ export default async function PilgrimManagementPage() {
   return (
     <AppLayout>
       <PilgrimManagementHeader totalPilgrims={pilgrims.length} groupLeaders={groupLeaders} />
-      <PilgrimTable initialPilgrims={pilgrims} />
+      <PilgrimTable initialPilgrims={pilgrims} groupLeaders={groupLeaders} />
     </AppLayout>
   );
 }

@@ -1,12 +1,14 @@
 'use client';
 
 import React, { useState } from 'react';
-import { ScanLine, UserPlus } from 'lucide-react';
+import { ScanLine, UserPlus, FileSpreadsheet } from 'lucide-react';
 import type { GroupLeader } from '@/lib/mockData';
 import AddPilgrimModal from './AddPilgrimModal';
+import ImportPilgrimsModal from './ImportPilgrimsModal';
 
 export default function PilgrimManagementHeader({ totalPilgrims, groupLeaders }: { totalPilgrims: number; groupLeaders: GroupLeader[] }) {
   const [modalOpen, setModalOpen] = useState(false);
+  const [importOpen, setImportOpen] = useState(false);
   const [startWithScan, setStartWithScan] = useState(false);
 
   const openScan = () => {
@@ -26,6 +28,10 @@ export default function PilgrimManagementHeader({ totalPilgrims, groupLeaders }:
           <p className="text-sm text-muted-foreground mt-1">{totalPilgrims} pilgrims registered</p>
         </div>
         <div className="flex items-center gap-2 flex-shrink-0 flex-wrap">
+          <button onClick={() => setImportOpen(true)} className="btn-secondary text-sm flex items-center gap-1.5">
+            <FileSpreadsheet size={14} />
+            Import Excel
+          </button>
           <button onClick={openScan} className="btn-secondary text-sm flex items-center gap-1.5">
             <ScanLine size={14} />
             Passport OCR
@@ -41,6 +47,11 @@ export default function PilgrimManagementHeader({ totalPilgrims, groupLeaders }:
         open={modalOpen}
         onClose={() => setModalOpen(false)}
         startWithScan={startWithScan}
+        groupLeaders={groupLeaders}
+      />
+      <ImportPilgrimsModal
+        open={importOpen}
+        onClose={() => setImportOpen(false)}
         groupLeaders={groupLeaders}
       />
     </>

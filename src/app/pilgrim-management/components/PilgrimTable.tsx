@@ -19,13 +19,15 @@ import {
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
+import type { GroupLeader } from '@/lib/mockData';
+import EditPilgrimModal from './EditPilgrimModal';
 
 type SortField = keyof Pilgrim | null;
 type SortDir = 'asc' | 'desc';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
-export default function PilgrimTable({ initialPilgrims }: { initialPilgrims: Pilgrim[] }) {
+export default function PilgrimTable({ initialPilgrims, groupLeaders }: { initialPilgrims: Pilgrim[]; groupLeaders: GroupLeader[] }) {
   const [pilgrimsData, setPilgrimsData] = useState<Pilgrim[]>(initialPilgrims);
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
@@ -35,6 +37,7 @@ export default function PilgrimTable({ initialPilgrims }: { initialPilgrims: Pil
   const [page, setPage] = useState(1);
   const [pageSize, setPageSize] = useState(10);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
+  const [editingPilgrim, setEditingPilgrim] = useState<Pilgrim | null>(null);
 
   const filterTabs = useMemo(() => {
     const visaPending = pilgrimsData.filter((p) => p.visaStatus === 'pending' || p.visaStatus === 'processing' || p.visaStatus === 'not-started').length;
@@ -358,17 +361,21 @@ export default function PilgrimTable({ initialPilgrims }: { initialPilgrims: Pil
                             <ExternalLink size={13} />
                           </Link>
                           <button
+                            onClick={() => setEditingPilgrim(p)}
                             className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
                             title="Edit pilgrim"
                           >
                             <Edit2 size={13} />
                           </button>
-                          <button
+                          <a
+                            href={`https://wa.me/${p.phone.replace(/[^\d]/g, '')}`}
+                            target="_blank"
+                            rel="noopener noreferrer"
                             className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-[#16A34A] transition-colors"
-                            title="Send WhatsApp"
+                            title="Open WhatsApp"
                           >
                             <MessageSquare size={13} />
-                          </button>
+                          </a>
                           <button
                             onClick={() => setDeleteConfirm(p.id)}
                             className="p-1.5 rounded hover:bg-[#FEF2F2] text-muted-foreground hover:text-[#DC2626] transition-colors"
@@ -459,6 +466,8 @@ export default function PilgrimTable({ initialPilgrims }: { initialPilgrims: Pil
           </div>
         </div>
       )}
+
+      <EditPilgrimModal pilgrim={editingPilgrim} onClose={() => setEditingPilgrim(null)} groupLeaders={groupLeaders} />
     </>
   );
 }

@@ -114,10 +114,10 @@ export interface NewPilgrimInput {
   passportExpiry: string;
   dateOfBirth: string;
   gender: 'M' | 'F';
-  phone: string;
-  email: string;
-  emergencyContact: string;
-  emergencyPhone: string;
+  phone?: string;
+  email?: string;
+  emergencyContact?: string;
+  emergencyPhone?: string;
   groupId: string;
   paymentTotal: number;
   fromOcrScan: boolean;
@@ -162,16 +162,59 @@ export async function createPilgrim(input: NewPilgrimInput): Promise<string> {
       input.gender,
       input.dateOfBirth,
       ageFromDob(input.dateOfBirth),
-      input.phone,
-      input.email,
-      input.emergencyContact,
-      input.emergencyPhone,
+      input.phone ?? '',
+      input.email ?? '',
+      input.emergencyContact ?? '',
+      input.emergencyPhone ?? '',
       'not-checked',
       registeredAt,
     ]
   );
 
   return id;
+}
+
+export interface UpdatePilgrimInput {
+  name: string;
+  nationality: string;
+  nationalityCode: string;
+  passportNumber: string;
+  passportExpiry: string;
+  dateOfBirth: string;
+  gender: 'M' | 'F';
+  phone: string;
+  email: string;
+  emergencyContact: string;
+  emergencyPhone: string;
+  groupId: string;
+  paymentTotal: number;
+}
+
+export async function updatePilgrim(id: string, input: UpdatePilgrimInput): Promise<void> {
+  await query(
+    `UPDATE pilgrims SET
+       name = $2, nationality = $3, nationality_code = $4, passport_number = $5, passport_expiry = $6,
+       date_of_birth = $7, age = $8, gender = $9, phone = $10, email = $11,
+       emergency_contact = $12, emergency_phone = $13, group_id = $14, payment_total = $15
+     WHERE id = $1`,
+    [
+      id,
+      input.name,
+      input.nationality,
+      input.nationalityCode,
+      input.passportNumber,
+      input.passportExpiry,
+      input.dateOfBirth,
+      ageFromDob(input.dateOfBirth),
+      input.gender,
+      input.phone,
+      input.email,
+      input.emergencyContact,
+      input.emergencyPhone,
+      input.groupId,
+      input.paymentTotal,
+    ]
+  );
 }
 
 export async function deletePilgrim(id: string): Promise<void> {

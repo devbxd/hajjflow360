@@ -107,11 +107,23 @@ CREATE TABLE IF NOT EXISTS activity_log (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Campaign running costs (hotel deposits, flight blocks, staff, etc). Kept
+-- separate from `payments`, which is money coming IN from pilgrims.
+CREATE TABLE IF NOT EXISTS expenses (
+  id SERIAL PRIMARY KEY,
+  description TEXT NOT NULL,
+  category TEXT NOT NULL,
+  amount NUMERIC NOT NULL,
+  spent_on DATE NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 ALTER TABLE pilgrims ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'pending';
 
 CREATE INDEX IF NOT EXISTS idx_pilgrims_group_id ON pilgrims(group_id);
 CREATE INDEX IF NOT EXISTS idx_payments_pilgrim_id ON payments(pilgrim_id);
 CREATE INDEX IF NOT EXISTS idx_activity_log_created_at ON activity_log(created_at DESC);
+CREATE INDEX IF NOT EXISTS idx_expenses_spent_on ON expenses(spent_on DESC);
 
 -- payment_paid is always summed from real payment rows here, never stored
 -- on the pilgrim itself, so the displayed "paid" amount can't drift from
