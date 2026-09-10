@@ -1,11 +1,15 @@
-import React from 'react';
-import type { Pilgrim } from '@/lib/mockData';
+'use client';
+
+import React, { useState } from 'react';
+import type { GroupLeader, Pilgrim } from '@/lib/mockData';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { ChevronLeft, Edit2, Printer, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
+import EditPilgrimModal from '@/app/pilgrim-management/components/EditPilgrimModal';
 
-export default function PilgrimProfileHeader({ pilgrim: p }: { pilgrim: Pilgrim }) {
+export default function PilgrimProfileHeader({ pilgrim: p, groupLeaders }: { pilgrim: Pilgrim; groupLeaders: GroupLeader[] }) {
   const paymentPct = Math.round((p.paymentPaid / p.paymentTotal) * 100);
+  const [editing, setEditing] = useState(false);
 
   return (
     <div>
@@ -54,7 +58,7 @@ export default function PilgrimProfileHeader({ pilgrim: p }: { pilgrim: Pilgrim 
                   <Printer size={13} />
                   Print
                 </button>
-                <button className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5">
+                <button onClick={() => setEditing(true)} className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5">
                   <Edit2 size={13} />
                   Edit Profile
                 </button>
@@ -108,6 +112,10 @@ export default function PilgrimProfileHeader({ pilgrim: p }: { pilgrim: Pilgrim 
           <span className="text-sm text-muted-foreground">{p.groupId}</span>
         </div>
       </div>
+
+      {editing && (
+        <EditPilgrimModal pilgrim={p} onClose={() => setEditing(false)} groupLeaders={groupLeaders} />
+      )}
     </div>
   );
 }
