@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import type { FlightRow } from '@/lib/data/logistics';
 import type { Pilgrim } from '@/lib/mockData';
 import StatusBadge from '@/components/ui/StatusBadge';
@@ -12,8 +14,12 @@ interface FlightManifestsTabProps {
 }
 
 export default function FlightManifestsTab({ flights, pilgrims }: FlightManifestsTabProps) {
+  const router = useRouter();
   const [selectedFlight, setSelectedFlight] = useState(flights[0]);
   const [manifestSearch, setManifestSearch] = useState('');
+  const [assignOpen, setAssignOpen] = useState(false);
+  const [selectedForFlight, setSelectedForFlight] = useState<Set<string>>(new Set());
+  const [saving, setSaving] = useState(false);
 
   if (!selectedFlight) {
     return <div className="card-base text-sm text-muted-foreground">No flights configured yet.</div>;
@@ -44,6 +50,40 @@ export default function FlightManifestsTab({ flights, pilgrims }: FlightManifest
 
   const confirmedCount = selectedFlight.confirmed;
   const pendingCount = selectedFlight.passengers - selectedFlight.confirmed;
+  const unassignedPilgrims = pilgrims.filter((p) => !p.flightNumber);
+
+  const toggleForFlight = (id: string) => {
+    setSelectedForFlight((prev) => {
+      const next = new Set(prev);
+      next.has(id) ? next.delete(id) : next.add(id);
+      return next;
+    });
+  };
+
+  const handleAssignToFlight = async () => {
+    const ids = Array.from(selectedForFlight);
+    if (ids.length === 0) {
+      toast.error('Select at least one pilgrim.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch('/api/allocation/assign-flight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pilgrimIds: ids, flightNumber: selectedFlight.flightNumber, flightDate: selectedFlight.date }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(`${ids.length} pilgrims assigned to ${selectedFlight.flightNumber}`);
+      setAssignOpen(false);
+      setSelectedForFlight(new Set());
+      router.refresh();
+    } catch {
+      toast.error('Failed to assign pilgrims to flight.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   return (
     <div className="space-y-6">
@@ -192,10 +232,48 @@ export default function FlightManifestsTab({ flights, pilgrims }: FlightManifest
             <Plane size={32} className="text-muted-foreground mx-auto mb-2" />
             <p className="text-sm font-medium text-foreground">No pilgrims assigned to this flight yet</p>
             <p className="text-xs text-muted-foreground mt-1">Use the Auto-Assign tool or manually assign pilgrims to {selectedFlight.flightNumber}</p>
-            <button className="btn-primary text-sm mt-3">Assign Pilgrims to Flight</button>
+            <button onClick={() => setAssignOpen(true)} className="btn-primary text-sm mt-3">Assign Pilgrims to Flight</button>
           </div>
         )}
       </div>
+
+      {assignOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm fade-in">
+          <div className="bg-card rounded-xl border border-border shadow-xl p-6 w-full max-w-md mx-4 slide-up max-h-[80vh] overflow-y-auto scrollbar-thin">
+            <h2 className="text-base font-semibold text-foreground mb-1">Assign Pilgrims to {selectedFlight.flightNumber}</h2>
+            <p className="text-sm text-muted-foreground mb-4">Pilgrims with no flight assigned yet.</p>
+            {unassignedPilgrims.length === 0 ? (
+              <p className="text-sm text-muted-foreground">Every pilgrim already has a flight assigned.</p>
+            ) : (
+              <div className="space-y-1 mb-4">
+                {unassignedPilgrims.map((p) => (
+                  <label key={p.id} className="flex items-center gap-2 px-2 py-1.5 rounded-lg hover:bg-muted cursor-pointer">
+                    <input
+                      type="checkbox"
+                      checked={selectedForFlight.has(p.id)}
+                      onChange={() => toggleForFlight(p.id)}
+                      className="rounded border-border"
+                    />
+                    <span className="text-sm text-foreground">{p.name}</span>
+                    <span className="text-xs font-mono-data text-muted-foreground ml-auto">{p.id}</span>
+                  </label>
+                ))}
+              </div>
+            )}
+            <div className="flex gap-3">
+              <button onClick={() => { setAssignOpen(false); setSelectedForFlight(new Set()); }} className="btn-secondary flex-1 justify-center">Cancel</button>
+              <button
+                onClick={handleAssignToFlight}
+                disabled={saving || selectedForFlight.size === 0}
+                className="btn-primary flex-1 justify-center"
+                style={{ opacity: saving || selectedForFlight.size === 0 ? 0.6 : 1 }}
+              >
+                Assign {selectedForFlight.size || ''}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

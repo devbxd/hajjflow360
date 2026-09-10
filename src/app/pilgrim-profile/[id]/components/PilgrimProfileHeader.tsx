@@ -54,7 +54,7 @@ export default function PilgrimProfileHeader({ pilgrim: p, groupLeaders }: { pil
                   <MessageSquare size={13} />
                   WhatsApp
                 </a>
-                <button className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5">
+                <button onClick={() => window.print()} className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5">
                   <Printer size={13} />
                   Print
                 </button>

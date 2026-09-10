@@ -226,6 +226,11 @@ export async function deletePilgrims(ids: string[]): Promise<void> {
   await query('DELETE FROM pilgrims WHERE id = ANY($1)', [ids]);
 }
 
+export async function assignGroupToPilgrims(ids: string[], groupId: string): Promise<void> {
+  if (ids.length === 0) return;
+  await query('UPDATE pilgrims SET group_id = $2 WHERE id = ANY($1)', [ids, groupId]);
+}
+
 export async function updateAttendance(id: string, status: Pilgrim['attendanceStatus']): Promise<void> {
   await query('UPDATE pilgrims SET attendance_status = $2 WHERE id = $1', [id, status]);
 }

@@ -1,6 +1,8 @@
 'use client';
 
 import React, { useState } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import type { BusRow } from '@/lib/data/logistics';
 import type { Pilgrim } from '@/lib/mockData';
 import { Users, MapPin, User } from 'lucide-react';
@@ -30,11 +32,59 @@ function buildSeats(busNumber: number, occupants: Pilgrim[]) {
 }
 
 export default function BusSeatingTab({ buses, pilgrims }: { buses: BusRow[]; pilgrims: Pilgrim[] }) {
+  const router = useRouter();
   const [selectedBus, setSelectedBus] = useState(buses[0]);
   const [selectedSeat, setSelectedSeat] = useState<string | null>(null);
+  const [pickerPilgrimId, setPickerPilgrimId] = useState('');
+  const [saving, setSaving] = useState(false);
   const occupants = pilgrims.filter((p) => p.busNumber === selectedBus?.number);
   const seats = selectedBus ? buildSeats(selectedBus.number, occupants) : [];
   const rows = ['A', 'B', 'C', 'D', 'E'];
+  const unassignedPilgrims = pilgrims.filter((p) => !p.busNumber);
+
+  const handleAssign = async (seatLabel: string, previousOccupantId?: string) => {
+    if (!selectedBus) return;
+    if (!pickerPilgrimId) {
+      toast.error('Choose a pilgrim first.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const res = await fetch('/api/allocation/assign-seat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pilgrimId: pickerPilgrimId, busNumber: selectedBus.number, seatNumber: seatLabel, previousOccupantId }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(`Seat ${seatLabel} assigned.`);
+      setSelectedSeat(null);
+      setPickerPilgrimId('');
+      router.refresh();
+    } catch {
+      toast.error('Failed to assign seat.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleVacate = async (occupantId: string) => {
+    setSaving(true);
+    try {
+      const res = await fetch('/api/allocation/assign-seat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ previousOccupantId: occupantId }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Seat vacated.');
+      setSelectedSeat(null);
+      router.refresh();
+    } catch {
+      toast.error('Failed to vacate seat.');
+    } finally {
+      setSaving(false);
+    }
+  };
 
   if (!selectedBus) {
     return <div className="card-base text-sm text-muted-foreground">No buses configured yet.</div>;
@@ -173,23 +223,52 @@ export default function BusSeatingTab({ buses, pilgrims }: { buses: BusRow[]; pi
             {(() => {
               const seat = seats.find((s) => s.id === selectedSeat);
               if (!seat) return null;
+              const seatLabel = `${seat.row}${seat.col}`;
               return (
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm font-medium text-foreground">
-                      Seat {seat.row}{seat.col} — {seat.occupied ? 'Occupied' : 'Available'}
-                    </p>
+                <div>
+                  <div className="flex items-center justify-between mb-3">
+                    <div>
+                      <p className="text-sm font-medium text-foreground">
+                        Seat {seatLabel} — {seat.occupied ? 'Occupied' : 'Available'}
+                      </p>
+                      {seat.occupied && seat.pilgrim && (
+                        <p className="text-xs font-mono-data text-muted-foreground mt-0.5">{seat.pilgrim.name} · {seat.pilgrim.id}</p>
+                      )}
+                    </div>
                     {seat.occupied && seat.pilgrim && (
-                      <p className="text-xs font-mono-data text-muted-foreground mt-0.5">{seat.pilgrim.name} · {seat.pilgrim.id}</p>
+                      <button
+                        onClick={() => handleVacate(seat.pilgrim!.id)}
+                        disabled={saving}
+                        className="px-3 py-1.5 text-xs font-medium bg-[#FEF2F2] text-[#DC2626] border border-[#DC2626]/20 rounded-lg hover:bg-[#FEE2E2] transition-colors"
+                      >
+                        Remove from Seat
+                      </button>
                     )}
                   </div>
-                  <div className="flex items-center gap-2">
-                    {seat.occupied ? (
-                      <button className="btn-secondary text-xs px-3 py-1.5">Reassign Seat</button>
-                    ) : (
-                      <button className="btn-primary text-xs px-3 py-1.5">Assign Pilgrim</button>
-                    )}
-                  </div>
+                  {unassignedPilgrims.length === 0 ? (
+                    <p className="text-xs text-muted-foreground">No unassigned pilgrims available to place here.</p>
+                  ) : (
+                    <div className="flex items-center gap-2">
+                      <select
+                        value={pickerPilgrimId}
+                        onChange={(e) => setPickerPilgrimId(e.target.value)}
+                        className="flex-1 text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                      >
+                        <option value="">Choose a pilgrim...</option>
+                        {unassignedPilgrims.map((p) => (
+                          <option key={p.id} value={p.id}>{p.name} ({p.id})</option>
+                        ))}
+                      </select>
+                      <button
+                        onClick={() => handleAssign(seatLabel, seat.occupied ? seat.pilgrim?.id : undefined)}
+                        disabled={saving || !pickerPilgrimId}
+                        className="btn-primary text-xs px-3 py-1.5 flex-shrink-0"
+                        style={{ opacity: saving || !pickerPilgrimId ? 0.6 : 1 }}
+                      >
+                        {seat.occupied ? 'Reassign Seat' : 'Assign Pilgrim'}
+                      </button>
+                    </div>
+                  )}
                 </div>
               );
             })()}

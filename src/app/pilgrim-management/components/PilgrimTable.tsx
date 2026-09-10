@@ -38,6 +38,8 @@ export default function PilgrimTable({ initialPilgrims, groupLeaders }: { initia
   const [pageSize, setPageSize] = useState(10);
   const [deleteConfirm, setDeleteConfirm] = useState<string | null>(null);
   const [editingPilgrim, setEditingPilgrim] = useState<Pilgrim | null>(null);
+  const [assignGroupOpen, setAssignGroupOpen] = useState(false);
+  const [assignGroupId, setAssignGroupId] = useState(groupLeaders[0]?.groupId ?? '');
 
   const filterTabs = useMemo(() => {
     const visaPending = pilgrimsData.filter((p) => p.visaStatus === 'pending' || p.visaStatus === 'processing' || p.visaStatus === 'not-started').length;
@@ -136,6 +138,58 @@ export default function PilgrimTable({ initialPilgrims, groupLeaders }: { initia
     }
   };
 
+  const handleExportSelected = () => {
+    const rows = pilgrimsData.filter((p) => selectedIds.has(p.id));
+    const csvRows = [
+      ['Pilgrim ID', 'Name', 'Nationality', 'Passport #', 'Visa', 'Group', 'Payment Status', 'Phone', 'Email'],
+      ...rows.map((p) => [p.id, p.name, p.nationality, p.passportNumber, p.visaStatus, p.groupId, p.paymentStatus, p.phone, p.email]),
+    ];
+    const csv = csvRows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
+    const blob = new Blob([csv], { type: 'text/csv' });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'manasikpro_selected_pilgrims.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  };
+
+  const handleSendWhatsAppBulk = () => {
+    const rows = pilgrimsData.filter((p) => selectedIds.has(p.id));
+    const withPhone = rows.filter((p) => p.phone);
+    if (withPhone.length === 0) {
+      toast.error('None of the selected pilgrims have a phone number on file.');
+      return;
+    }
+    withPhone.forEach((p) => {
+      window.open(`https://wa.me/${p.phone.replace(/[^\d]/g, '')}`, '_blank', 'noopener,noreferrer');
+    });
+    if (withPhone.length < rows.length) {
+      toast.warning(`Opened WhatsApp for ${withPhone.length} of ${rows.length} (${rows.length - withPhone.length} have no phone on file). Allow pop-ups if some tabs didn't open.`);
+    } else {
+      toast.success(`Opened WhatsApp for ${withPhone.length} pilgrims. Allow pop-ups if some tabs didn't open.`);
+    }
+  };
+
+  const handleAssignGroup = async () => {
+    if (!assignGroupId) return;
+    const ids = Array.from(selectedIds);
+    try {
+      const res = await fetch('/api/pilgrims/bulk-assign-group', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ids, groupId: assignGroupId }),
+      });
+      if (!res.ok) throw new Error();
+      setPilgrimsData((prev) => prev.map((p) => (selectedIds.has(p.id) ? { ...p, groupId: assignGroupId } : p)));
+      toast.success(`${ids.length} pilgrims moved to ${assignGroupId}`);
+      setSelectedIds(new Set());
+      setAssignGroupOpen(false);
+    } catch {
+      toast.error('Failed to assign group. Please try again.');
+    }
+  };
+
   const handleDelete = async (id: string) => {
     try {
       const res = await fetch(`/api/pilgrims/${id}`, { method: 'DELETE' });
@@ -198,19 +252,19 @@ export default function PilgrimTable({ initialPilgrims, groupLeaders }: { initia
             <span className="text-sm font-medium text-primary">{selectedIds.size} selected</span>
             <div className="flex items-center gap-2 ml-2">
               <button
-                onClick={() => toast.success(`Assigning group to ${selectedIds.size} pilgrims...`)}
+                onClick={() => setAssignGroupOpen(true)}
                 className="btn-secondary text-xs px-3 py-1.5"
               >
                 Assign Group
               </button>
               <button
-                onClick={() => toast.success(`Sending WhatsApp to ${selectedIds.size} pilgrims...`)}
+                onClick={handleSendWhatsAppBulk}
                 className="btn-secondary text-xs px-3 py-1.5"
               >
                 Send WhatsApp
               </button>
               <button
-                onClick={() => toast.success(`Exporting ${selectedIds.size} pilgrims...`)}
+                onClick={handleExportSelected}
                 className="btn-secondary text-xs px-3 py-1.5"
               >
                 Export Selected
@@ -462,6 +516,28 @@ export default function PilgrimTable({ initialPilgrims, groupLeaders }: { initia
               >
                 Remove Pilgrim
               </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {assignGroupOpen && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm fade-in">
+          <div className="bg-card rounded-xl border border-border shadow-xl p-6 w-full max-w-sm mx-4 slide-up">
+            <h2 className="text-base font-semibold text-foreground mb-4">Assign Group</h2>
+            <p className="text-sm text-muted-foreground mb-3">Move {selectedIds.size} selected pilgrims to:</p>
+            <select
+              value={assignGroupId}
+              onChange={(e) => setAssignGroupId(e.target.value)}
+              className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring mb-4"
+            >
+              {groupLeaders.map((gl) => (
+                <option key={gl.groupId} value={gl.groupId}>{gl.groupId} — {gl.name}</option>
+              ))}
+            </select>
+            <div className="flex gap-3">
+              <button onClick={() => setAssignGroupOpen(false)} className="btn-secondary flex-1 justify-center">Cancel</button>
+              <button onClick={handleAssignGroup} className="btn-primary flex-1 justify-center">Move Pilgrims</button>
             </div>
           </div>
         </div>

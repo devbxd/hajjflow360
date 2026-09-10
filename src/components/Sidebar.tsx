@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, UserCheck, ChevronLeft, ChevronRight, Plane, Building2, Bus, QrCode, Bell, Settings, LogOut, AlertTriangle, ClipboardList, Layers, CreditCard, ScanLine, BookOpen, Receipt, TrendingUp, FileBarChart } from 'lucide-react';
+import { LayoutDashboard, Users, UserCheck, ChevronLeft, ChevronRight, Plane, Building2, Bus, QrCode, Bell, Settings, LogOut, AlertTriangle, Layers, CreditCard, ScanLine, BookOpen, Receipt, TrendingUp, FileBarChart } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
 
 
@@ -26,7 +26,6 @@ interface NavItem {
 const navItems: NavItem[] = [
   { label: 'Campaign Dashboard', href: '/', icon: LayoutDashboard, group: 'Overview' },
   { label: 'Pilgrim Management', href: '/pilgrim-management', icon: Users, badgeKey: 'pilgrimManagement', group: 'Pilgrims' },
-  { label: 'Pilgrim Profile', href: '/pilgrim-profile/PIL-001', icon: ClipboardList, group: 'Pilgrims' },
   { label: 'Pilgrim Registry', href: '/pilgrim-registry', icon: BookOpen, group: 'Pilgrims' },
   { label: 'Group Leaders', href: '/group-leader-dashboard', icon: UserCheck, group: 'Pilgrims' },
   { label: 'Passport Scanning', href: '/passport-scanning', icon: ScanLine, group: 'Pilgrims' },

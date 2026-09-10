@@ -1,8 +1,10 @@
 'use client';
 
 import React, { useState } from 'react';
+import Link from 'next/link';
 import type { Pilgrim } from '@/lib/mockData';
 import type { PaymentRecord } from '@/lib/data/pilgrims';
+import type { StatusType } from '@/components/ui/StatusBadge';
 import { ChevronDown, ChevronUp, User, FileText, Globe, MapPin, CreditCard } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Icon from '@/components/ui/AppIcon';
@@ -47,7 +49,41 @@ function InfoRow({ label, value, mono }: { label: string; value: string; mono?: 
   );
 }
 
-export default function PilgrimInfoPanels({ pilgrim: p, paymentHistory }: { pilgrim: Pilgrim; paymentHistory: PaymentRecord[] }) {
+interface HotelDates {
+  checkIn: string;
+  checkOut: string;
+}
+
+export default function PilgrimInfoPanels({
+  pilgrim: p,
+  paymentHistory,
+  makkahHotel,
+  madinahHotel,
+}: {
+  pilgrim: Pilgrim;
+  paymentHistory: PaymentRecord[];
+  makkahHotel: HotelDates | null;
+  madinahHotel: HotelDates | null;
+}) {
+  const flightBadge: StatusType = p.flightStatus === 'confirmed' ? 'approved' : p.flightStatus === 'pending' ? 'pending' : 'unallocated';
+  const busBadge: StatusType = p.busNumber ? 'allocated' : 'unallocated';
+  const hotelBadge: StatusType = p.hotelMakkah ? 'allocated' : 'unallocated';
+
+  const visaSteps: { step: string; done: boolean }[] =
+    p.visaStatus === 'rejected'
+      ? [
+          { step: 'Application Submitted', done: true },
+          { step: 'Documents Verified', done: true },
+          { step: 'MOFA Processing', done: true },
+          { step: 'Visa Rejected', done: true },
+        ]
+      : [
+          { step: 'Application Submitted', done: p.visaStatus !== 'not-started' },
+          { step: 'Documents Verified', done: p.visaStatus === 'processing' || p.visaStatus === 'approved' },
+          { step: 'MOFA Processing', done: p.visaStatus === 'processing' || p.visaStatus === 'approved' },
+          { step: 'Visa Approved', done: p.visaStatus === 'approved' },
+        ];
+
   return (
     <div className="space-y-4">
       {/* Personal Details */}
@@ -83,9 +119,9 @@ export default function PilgrimInfoPanels({ pilgrim: p, paymentHistory }: { pilg
           </p>
         </div>
         <div className="mt-3">
-          <button className="btn-secondary text-xs w-full justify-center">
+          <Link href="/passport-scanning" className="btn-secondary text-xs w-full justify-center">
             Re-scan Passport (OCR)
-          </button>
+          </Link>
         </div>
       </Panel>
 
@@ -98,28 +134,18 @@ export default function PilgrimInfoPanels({ pilgrim: p, paymentHistory }: { pilg
           </div>
           <InfoRow label="Visa Number" value={p.visaNumber ?? '—'} mono />
           <InfoRow label="Visa Expiry" value={p.visaExpiry ?? '—'} />
-          <InfoRow label="Application Date" value="20/03/2027" />
-          <InfoRow label="Approval Date" value="28/03/2027" />
-          <InfoRow label="Portal Ref." value="MOFA-2027-88341" mono />
           <InfoRow label="Visa Type" value="Hajj Visa" />
           <InfoRow label="Entry Type" value="Single Entry" />
         </div>
         <div className="mt-4 pt-4 border-t border-border">
           <p className="text-xs font-medium text-muted-foreground uppercase tracking-wide mb-2">Status Timeline</p>
           <div className="space-y-2">
-            {[
-              { step: 'Application Submitted', date: '20/03/2027', done: true },
-              { step: 'Documents Verified', date: '24/03/2027', done: true },
-              { step: 'MOFA Processing', date: '26/03/2027', done: true },
-              { step: 'Visa Approved', date: '28/03/2027', done: true },
-              { step: 'Visa Printed', date: '02/04/2027', done: true },
-            ].map((step, idx) => (
+            {visaSteps.map((step, idx) => (
               <div key={`vstep-${idx}`} className="flex items-center gap-3">
                 <div className={`w-4 h-4 rounded-full flex items-center justify-center flex-shrink-0 ${step.done ? 'bg-[#16A34A]' : 'bg-muted border-2 border-border'}`}>
                   {step.done && <span className="text-white text-xs">✓</span>}
                 </div>
-                <span className="text-sm text-foreground flex-1">{step.step}</span>
-                <span className="text-xs text-muted-foreground">{step.date}</span>
+                <span className={`text-sm flex-1 ${step.done ? 'text-foreground' : 'text-muted-foreground'}`}>{step.step}</span>
               </div>
             ))}
           </div>
@@ -131,29 +157,29 @@ export default function PilgrimInfoPanels({ pilgrim: p, paymentHistory }: { pilg
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="p-3 rounded-lg bg-secondary border border-primary/10">
             <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-2">Flight</p>
-            <p className="text-sm font-semibold text-foreground">{p.flightNumber}</p>
-            <p className="text-xs text-muted-foreground mt-1">{p.flightDate}</p>
-            <StatusBadge status="approved" size="sm" />
+            <p className="text-sm font-semibold text-foreground">{p.flightNumber ?? 'Not assigned'}</p>
+            <p className="text-xs text-muted-foreground mt-1">{p.flightDate ?? '—'}</p>
+            <StatusBadge status={flightBadge} size="sm" />
           </div>
           <div className="p-3 rounded-lg bg-secondary border border-primary/10">
             <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-2">Bus & Seat</p>
-            <p className="text-sm font-semibold text-foreground">Bus #{p.busNumber}</p>
-            <p className="text-xs text-muted-foreground mt-1">Seat {p.seatNumber}</p>
-            <StatusBadge status="allocated" size="sm" />
+            <p className="text-sm font-semibold text-foreground">{p.busNumber ? `Bus #${p.busNumber}` : 'Not assigned'}</p>
+            <p className="text-xs text-muted-foreground mt-1">{p.seatNumber ? `Seat ${p.seatNumber}` : '—'}</p>
+            <StatusBadge status={busBadge} size="sm" />
           </div>
           <div className="p-3 rounded-lg bg-secondary border border-primary/10">
             <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-2">Hotel & Room</p>
-            <p className="text-sm font-semibold text-foreground truncate">{p.hotelMakkah}</p>
-            <p className="text-xs text-muted-foreground mt-1">Room {p.roomNumber} · {p.roomType}</p>
-            <StatusBadge status="allocated" size="sm" />
+            <p className="text-sm font-semibold text-foreground truncate">{p.hotelMakkah ?? 'Not assigned'}</p>
+            <p className="text-xs text-muted-foreground mt-1">{p.roomNumber ? `Room ${p.roomNumber} · ${p.roomType}` : '—'}</p>
+            <StatusBadge status={hotelBadge} size="sm" />
           </div>
         </div>
         <div className="mt-4">
           <InfoRow label="Madinah Hotel" value={p.hotelMadinah ?? 'Not assigned'} />
-          <InfoRow label="Check-in (Makkah)" value="15/09/2027" />
-          <InfoRow label="Check-out (Makkah)" value="22/09/2027" />
-          <InfoRow label="Check-in (Madinah)" value="22/09/2027" />
-          <InfoRow label="Check-out (Madinah)" value="28/09/2027" />
+          <InfoRow label="Check-in (Makkah)" value={makkahHotel?.checkIn ?? '—'} />
+          <InfoRow label="Check-out (Makkah)" value={makkahHotel?.checkOut ?? '—'} />
+          <InfoRow label="Check-in (Madinah)" value={madinahHotel?.checkIn ?? '—'} />
+          <InfoRow label="Check-out (Madinah)" value={madinahHotel?.checkOut ?? '—'} />
         </div>
       </Panel>
 
