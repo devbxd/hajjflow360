@@ -24,8 +24,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No group provided.' }, { status: 400 });
   }
 
-  await assignGroupToPilgrims(ids, body.groupId);
-  await logActivity('pilgrim', `${ids.length} pilgrims moved to ${body.groupId} by ${session.displayName}`, 'check');
+  await assignGroupToPilgrims(ids, body.groupId, session.companyId);
+  await logActivity('pilgrim', `${ids.length} pilgrims moved to ${body.groupId} by ${session.displayName}`, 'check', session.companyId);
 
   return NextResponse.json({ ok: true, count: ids.length });
 }

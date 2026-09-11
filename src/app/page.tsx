@@ -1,5 +1,7 @@
 import React from 'react';
+import { redirect } from 'next/navigation';
 import AppLayout from '@/components/AppLayout';
+import { getCurrentUser } from '@/lib/auth/currentUser';
 import CampaignHeader from './components/CampaignHeader';
 import MetricsBentoGrid from './components/MetricsBentoGrid';
 import DashboardCharts from './components/DashboardCharts';
@@ -24,12 +26,15 @@ const VISA_COLORS: Record<string, string> = {
 };
 
 export default async function CampaignDashboardPage() {
+  const session = await getCurrentUser();
+  if (!session) redirect('/login');
+
   const [pilgrims, groupLeaders, stats, registrationData, activity] = await Promise.all([
-    getAllPilgrims(),
-    getGroupLeaders(),
-    getCampaignStats(),
-    getRegistrationTimeline(),
-    getRecentActivity(8),
+    getAllPilgrims(session.companyId),
+    getGroupLeaders(session.companyId),
+    getCampaignStats(session.companyId),
+    getRegistrationTimeline(session.companyId),
+    getRecentActivity(session.companyId, 8),
   ]);
 
   const atRisk = computeAtRisk(pilgrims, Math.max(1, Math.ceil((new Date(2027, 8, 15).getTime() - Date.now()) / 86400000)));

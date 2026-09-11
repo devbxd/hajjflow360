@@ -8,6 +8,6 @@ export async function POST() {
     return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
   }
 
-  const result = await autoAssignRemaining();
+  const result = await autoAssignRemaining(session.companyId);
   return NextResponse.json(result);
 }

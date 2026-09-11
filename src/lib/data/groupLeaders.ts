@@ -27,7 +27,7 @@ function mapRow(row: GroupLeaderRow): GroupLeader {
   };
 }
 
-function statsQuery(whereClause: string) {
+function statsQuery(extraWhere: string) {
   return `
     SELECT
       gl.id, gl.name, gl.phone, gl.group_id,
@@ -37,18 +37,18 @@ function statsQuery(whereClause: string) {
       COUNT(*) FILTER (WHERE pv.payment_paid >= pv.payment_total) AS payment_complete,
       COUNT(*) FILTER (WHERE pv.attendance_status = 'present') AS attendance_present
     FROM group_leaders gl
-    LEFT JOIN pilgrims_with_paid pv ON pv.group_id = gl.group_id
-    ${whereClause}
+    LEFT JOIN pilgrims_with_paid pv ON pv.group_id = gl.group_id AND pv.company_id = gl.company_id
+    WHERE gl.company_id = $1 ${extraWhere}
     GROUP BY gl.id, gl.name, gl.phone, gl.group_id
   `;
 }
 
-export async function getGroupLeaders(): Promise<GroupLeader[]> {
-  const rows = await query<GroupLeaderRow>(`${statsQuery('')} ORDER BY gl.id`);
+export async function getGroupLeaders(companyId: string): Promise<GroupLeader[]> {
+  const rows = await query<GroupLeaderRow>(`${statsQuery('')} ORDER BY gl.id`, [companyId]);
   return rows.map(mapRow);
 }
 
-export async function getGroupLeaderByGroupId(groupId: string): Promise<GroupLeader | null> {
-  const rows = await query<GroupLeaderRow>(statsQuery('WHERE gl.group_id = $1'), [groupId]);
+export async function getGroupLeaderByGroupId(groupId: string, companyId: string): Promise<GroupLeader | null> {
+  const rows = await query<GroupLeaderRow>(statsQuery('AND gl.group_id = $2'), [companyId, groupId]);
   return rows.length ? mapRow(rows[0]) : null;
 }

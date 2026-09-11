@@ -1,6 +1,8 @@
 import React from 'react';
 import Link from 'next/link';
+import { redirect } from 'next/navigation';
 import AppLayout from '@/components/AppLayout';
+import { getCurrentUser } from '@/lib/auth/currentUser';
 import { getAllPilgrims } from '@/lib/data/pilgrims';
 import { computeAtRisk } from '@/lib/data/campaign';
 import { AlertTriangle, Phone, ExternalLink } from 'lucide-react';
@@ -14,7 +16,10 @@ const SEVERITY_STYLE: Record<string, string> = {
 };
 
 export default async function EmergencyListsPage() {
-  const pilgrims = await getAllPilgrims();
+  const session = await getCurrentUser();
+  if (!session) redirect('/login');
+
+  const pilgrims = await getAllPilgrims(session.companyId);
   const atRisk = computeAtRisk(pilgrims, 12);
   const rows = atRisk.map((risk) => ({ risk, pilgrim: pilgrims.find((p) => p.id === risk.id) }));
 

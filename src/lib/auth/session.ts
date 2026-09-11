@@ -14,6 +14,7 @@ function getSecretKey() {
 export interface SessionPayload {
   username: string;
   displayName: string;
+  companyId: string;
 }
 
 export async function createSessionToken(payload: SessionPayload): Promise<string> {
@@ -27,10 +28,10 @@ export async function createSessionToken(payload: SessionPayload): Promise<strin
 export async function verifySessionToken(token: string): Promise<SessionPayload | null> {
   try {
     const { payload } = await jwtVerify(token, getSecretKey());
-    if (typeof payload.username !== 'string' || typeof payload.displayName !== 'string') {
+    if (typeof payload.username !== 'string' || typeof payload.displayName !== 'string' || typeof payload.companyId !== 'string') {
       return null;
     }
-    return { username: payload.username, displayName: payload.displayName };
+    return { username: payload.username, displayName: payload.displayName, companyId: payload.companyId };
   } catch {
     return null;
   }

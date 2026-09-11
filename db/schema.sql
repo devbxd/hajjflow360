@@ -1,6 +1,15 @@
 -- ManasikPro schema
 -- Run once against the Neon database: npm run db:migrate
 
+-- One row per client agency. Every business table below carries a
+-- company_id so agencies never see each other's data, even though they all
+-- share the same database.
+CREATE TABLE IF NOT EXISTS companies (
+  id TEXT PRIMARY KEY,
+  name TEXT NOT NULL,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 CREATE TABLE IF NOT EXISTS staff_users (
   username TEXT PRIMARY KEY,
   display_name TEXT NOT NULL,
@@ -120,15 +129,64 @@ CREATE TABLE IF NOT EXISTS expenses (
 
 ALTER TABLE pilgrims ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'pending';
 
+-- Multi-tenant separation: every business table gets a company_id, existing
+-- rows are backfilled onto a first company so nothing currently in use
+-- breaks, then the column is locked to NOT NULL.
+INSERT INTO companies (id, name) VALUES ('CO-001', 'ManasikPro') ON CONFLICT (id) DO NOTHING;
+
+ALTER TABLE staff_users ADD COLUMN IF NOT EXISTS company_id TEXT REFERENCES companies(id);
+UPDATE staff_users SET company_id = 'CO-001' WHERE company_id IS NULL;
+ALTER TABLE staff_users ALTER COLUMN company_id SET NOT NULL;
+
+ALTER TABLE group_leaders ADD COLUMN IF NOT EXISTS company_id TEXT REFERENCES companies(id);
+UPDATE group_leaders SET company_id = 'CO-001' WHERE company_id IS NULL;
+ALTER TABLE group_leaders ALTER COLUMN company_id SET NOT NULL;
+
+ALTER TABLE pilgrims ADD COLUMN IF NOT EXISTS company_id TEXT REFERENCES companies(id);
+UPDATE pilgrims SET company_id = 'CO-001' WHERE company_id IS NULL;
+ALTER TABLE pilgrims ALTER COLUMN company_id SET NOT NULL;
+
+ALTER TABLE hotels ADD COLUMN IF NOT EXISTS company_id TEXT REFERENCES companies(id);
+UPDATE hotels SET company_id = 'CO-001' WHERE company_id IS NULL;
+ALTER TABLE hotels ALTER COLUMN company_id SET NOT NULL;
+
+ALTER TABLE buses ADD COLUMN IF NOT EXISTS company_id TEXT REFERENCES companies(id);
+UPDATE buses SET company_id = 'CO-001' WHERE company_id IS NULL;
+ALTER TABLE buses ALTER COLUMN company_id SET NOT NULL;
+
+ALTER TABLE flights ADD COLUMN IF NOT EXISTS company_id TEXT REFERENCES companies(id);
+UPDATE flights SET company_id = 'CO-001' WHERE company_id IS NULL;
+ALTER TABLE flights ALTER COLUMN company_id SET NOT NULL;
+
+ALTER TABLE activity_log ADD COLUMN IF NOT EXISTS company_id TEXT REFERENCES companies(id);
+UPDATE activity_log SET company_id = 'CO-001' WHERE company_id IS NULL;
+ALTER TABLE activity_log ALTER COLUMN company_id SET NOT NULL;
+
+ALTER TABLE expenses ADD COLUMN IF NOT EXISTS company_id TEXT REFERENCES companies(id);
+UPDATE expenses SET company_id = 'CO-001' WHERE company_id IS NULL;
+ALTER TABLE expenses ALTER COLUMN company_id SET NOT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_pilgrims_group_id ON pilgrims(group_id);
 CREATE INDEX IF NOT EXISTS idx_payments_pilgrim_id ON payments(pilgrim_id);
 CREATE INDEX IF NOT EXISTS idx_activity_log_created_at ON activity_log(created_at DESC);
 CREATE INDEX IF NOT EXISTS idx_expenses_spent_on ON expenses(spent_on DESC);
+CREATE INDEX IF NOT EXISTS idx_pilgrims_company_id ON pilgrims(company_id);
+CREATE INDEX IF NOT EXISTS idx_group_leaders_company_id ON group_leaders(company_id);
+CREATE INDEX IF NOT EXISTS idx_hotels_company_id ON hotels(company_id);
+CREATE INDEX IF NOT EXISTS idx_buses_company_id ON buses(company_id);
+CREATE INDEX IF NOT EXISTS idx_flights_company_id ON flights(company_id);
+CREATE INDEX IF NOT EXISTS idx_activity_log_company_id ON activity_log(company_id);
+CREATE INDEX IF NOT EXISTS idx_expenses_company_id ON expenses(company_id);
+CREATE INDEX IF NOT EXISTS idx_staff_users_company_id ON staff_users(company_id);
 
 -- payment_paid is always summed from real payment rows here, never stored
 -- on the pilgrim itself, so the displayed "paid" amount can't drift from
 -- the actual transaction history.
-CREATE OR REPLACE VIEW pilgrims_with_paid AS
+-- Dropped and recreated (not CREATE OR REPLACE) because adding company_id
+-- to pilgrims shifts every column position after it, which CREATE OR
+-- REPLACE VIEW rejects as an implicit column rename.
+DROP VIEW IF EXISTS pilgrims_with_paid;
+CREATE VIEW pilgrims_with_paid AS
 SELECT p.*, COALESCE(pay.paid, 0) AS payment_paid
 FROM pilgrims p
 LEFT JOIN (

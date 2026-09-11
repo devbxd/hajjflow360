@@ -15,7 +15,7 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
   }
 
   const { id } = await params;
-  const existing = await getPilgrimById(id);
+  const existing = await getPilgrimById(id, session.companyId);
   if (!existing) {
     return NextResponse.json({ error: 'Pilgrim not found.' }, { status: 404 });
   }
@@ -50,8 +50,8 @@ export async function PATCH(req: NextRequest, { params }: { params: Promise<{ id
     emergencyPhone: body.emergencyPhone!,
     groupId: body.groupId!,
     paymentTotal: Number(body.paymentTotal) || 0,
-  });
-  await logActivity('pilgrim', `${body.name} (${id}) updated by ${session.displayName}`, 'check');
+  }, session.companyId);
+  await logActivity('pilgrim', `${body.name} (${id}) updated by ${session.displayName}`, 'check', session.companyId);
 
   return NextResponse.json({ ok: true });
 }
@@ -63,13 +63,13 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   }
 
   const { id } = await params;
-  const pilgrim = await getPilgrimById(id);
+  const pilgrim = await getPilgrimById(id, session.companyId);
   if (!pilgrim) {
     return NextResponse.json({ error: 'Pilgrim not found.' }, { status: 404 });
   }
 
-  await deletePilgrim(id);
-  await logActivity('pilgrim', `${pilgrim.name} (${id}) removed from campaign by ${session.displayName}`, 'alert');
+  await deletePilgrim(id, session.companyId);
+  await logActivity('pilgrim', `${pilgrim.name} (${id}) removed from campaign by ${session.displayName}`, 'alert', session.companyId);
 
   return NextResponse.json({ ok: true });
 }

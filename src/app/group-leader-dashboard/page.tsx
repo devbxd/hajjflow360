@@ -1,6 +1,7 @@
 import React from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import AppLayout from '@/components/AppLayout';
+import { getCurrentUser } from '@/lib/auth/currentUser';
 import GroupLeaderHeader from './components/GroupLeaderHeader';
 import GroupKPIRow from './components/GroupKPIRow';
 import GroupPilgrimTable from './components/GroupPilgrimTable';
@@ -15,19 +16,22 @@ export default async function GroupLeaderDashboardPage({
 }: {
   searchParams: Promise<{ group?: string }>;
 }) {
+  const session = await getCurrentUser();
+  if (!session) redirect('/login');
+
   const { group } = await searchParams;
-  const allGroupLeaders = await getGroupLeaders();
+  const allGroupLeaders = await getGroupLeaders(session.companyId);
   if (allGroupLeaders.length === 0) {
     notFound();
   }
 
   const groupId = group && allGroupLeaders.some((gl) => gl.groupId === group) ? group : allGroupLeaders[0].groupId;
-  const groupLeader = await getGroupLeaderByGroupId(groupId);
+  const groupLeader = await getGroupLeaderByGroupId(groupId, session.companyId);
   if (!groupLeader) {
     notFound();
   }
 
-  const pilgrims = await getPilgrimsByGroup(groupId);
+  const pilgrims = await getPilgrimsByGroup(groupId, session.companyId);
   const alerts = computeAtRisk(pilgrims, 12);
 
   return (

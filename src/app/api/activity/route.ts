@@ -21,6 +21,6 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Invalid fields.' }, { status: 400 });
   }
 
-  await logActivity(body.type, body.message, body.icon ?? 'message');
+  await logActivity(body.type, body.message, body.icon ?? 'message', session.companyId);
   return NextResponse.json({ ok: true });
 }

@@ -8,7 +8,7 @@ export async function GET() {
   if (!session) {
     return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
   }
-  const expenses = await getExpenses();
+  const expenses = await getExpenses(session.companyId);
   return NextResponse.json({ expenses });
 }
 
@@ -34,8 +34,8 @@ export async function POST(req: NextRequest) {
     category: body.category,
     amount: Number(body.amount),
     spentOn: body.spentOn,
-  });
-  await logActivity('finance', `Expense "${body.description}" (SAR ${Number(body.amount).toLocaleString()}) logged by ${session.displayName}`, 'payment');
+  }, session.companyId);
+  await logActivity('finance', `Expense "${body.description}" (SAR ${Number(body.amount).toLocaleString()}) logged by ${session.displayName}`, 'payment', session.companyId);
 
   return NextResponse.json({ ok: true, id });
 }

@@ -22,11 +22,11 @@ export async function POST(req: NextRequest) {
   }
 
   await query(
-    `UPDATE pilgrims SET flight_number = $2, flight_date = $3, flight_status = 'confirmed' WHERE id = ANY($1)`,
-    [ids, body.flightNumber, body.flightDate ?? null]
+    `UPDATE pilgrims SET flight_number = $2, flight_date = $3, flight_status = 'confirmed' WHERE id = ANY($1) AND company_id = $4`,
+    [ids, body.flightNumber, body.flightDate ?? null, session.companyId]
   );
 
-  await logActivity('allocation', `${ids.length} pilgrims assigned to flight ${body.flightNumber} by ${session.displayName}`, 'bus');
+  await logActivity('allocation', `${ids.length} pilgrims assigned to flight ${body.flightNumber} by ${session.displayName}`, 'bus', session.companyId);
 
   return NextResponse.json({ ok: true, count: ids.length });
 }

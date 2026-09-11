@@ -19,10 +19,10 @@ function timeAgo(date: Date): string {
   return `${days}d ago`;
 }
 
-export async function getRecentActivity(limit = 20): Promise<ActivityEntry[]> {
+export async function getRecentActivity(companyId: string, limit = 20): Promise<ActivityEntry[]> {
   const rows = await query<{ id: number; type: string; message: string; icon: string; created_at: string }>(
-    'SELECT id, type, message, icon, created_at FROM activity_log ORDER BY created_at DESC LIMIT $1',
-    [limit]
+    'SELECT id, type, message, icon, created_at FROM activity_log WHERE company_id = $1 ORDER BY created_at DESC LIMIT $2',
+    [companyId, limit]
   );
   return rows.map((r) => ({
     id: `ACT-${r.id}`,
@@ -33,18 +33,18 @@ export async function getRecentActivity(limit = 20): Promise<ActivityEntry[]> {
   }));
 }
 
-export async function logActivity(type: string, message: string, icon: string): Promise<void> {
-  await query('INSERT INTO activity_log (type, message, icon) VALUES ($1, $2, $3)', [type, message, icon]);
+export async function logActivity(type: string, message: string, icon: string, companyId: string): Promise<void> {
+  await query('INSERT INTO activity_log (type, message, icon, company_id) VALUES ($1, $2, $3, $4)', [type, message, icon, companyId]);
 }
 
 // activity_log is a free-text log, not linked to a pilgrim_id, but every
 // entry that involves a pilgrim consistently mentions their id in the
 // message (e.g. "... (PIL-001) ..."), so matching on that substring gives a
 // real per-pilgrim history without a schema change.
-export async function getActivityForPilgrim(pilgrimId: string, limit = 20): Promise<ActivityEntry[]> {
+export async function getActivityForPilgrim(pilgrimId: string, companyId: string, limit = 20): Promise<ActivityEntry[]> {
   const rows = await query<{ id: number; type: string; message: string; icon: string; created_at: string }>(
-    `SELECT id, type, message, icon, created_at FROM activity_log WHERE message ILIKE $1 ORDER BY created_at DESC LIMIT $2`,
-    [`%${pilgrimId}%`, limit]
+    `SELECT id, type, message, icon, created_at FROM activity_log WHERE message ILIKE $1 AND company_id = $2 ORDER BY created_at DESC LIMIT $3`,
+    [`%${pilgrimId}%`, companyId, limit]
   );
   return rows.map((r) => ({
     id: `ACT-${r.id}`,

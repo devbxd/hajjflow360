@@ -38,14 +38,14 @@ const CAMPAIGN_CAPACITY = 900;
 const DEPARTURE_DATE = '15/09/2027';
 const RETURN_DATE = '22/10/2027';
 
-export async function getCampaignStats(): Promise<CampaignStats> {
+export async function getCampaignStats(companyId: string): Promise<CampaignStats> {
   const [pilgrimStats] = await query<{
     total: string; visa_approved: string; visa_pending: string; visa_processing: string; visa_rejected: string;
     passport_verified: string; passport_scanned: string; passport_missing: string; passport_pending: string;
     payment_full: string; payment_partial: string; payment_overdue: string; payment_pending: string;
     total_revenue: string; collected_revenue: string; rooms_allocated: string; at_risk: string;
-  }>(`
-    SELECT
+  }>(
+    `SELECT
       COUNT(*) AS total,
       COUNT(*) FILTER (WHERE visa_status = 'approved') AS visa_approved,
       COUNT(*) FILTER (WHERE visa_status = 'pending') AS visa_pending,
@@ -70,19 +70,31 @@ export async function getCampaignStats(): Promise<CampaignStats> {
            OR room_number IS NULL
       ) AS at_risk
     FROM pilgrims_with_paid
-  `);
-
-  const [{ buses_total, buses_allocated }] = await query<{ buses_total: string; buses_allocated: string }>(`
-    SELECT COUNT(DISTINCT b.id) AS buses_total, COUNT(DISTINCT b.id) FILTER (WHERE p.id IS NOT NULL) AS buses_allocated
-    FROM buses b LEFT JOIN pilgrims p ON p.bus_number = b.number
-  `);
-  const [{ hotels_total, rooms_total }] = await query<{ hotels_total: string; rooms_total: string }>(
-    'SELECT COUNT(*) AS hotels_total, COALESCE(SUM(total_rooms), 0) AS rooms_total FROM hotels'
+    WHERE company_id = $1`,
+    [companyId]
   );
-  const [{ flights_total }] = await query<{ flights_total: string }>('SELECT COUNT(*) AS flights_total FROM flights');
-  const [{ groups_total }] = await query<{ groups_total: string }>('SELECT COUNT(*) AS groups_total FROM group_leaders');
+
+  const [{ buses_total, buses_allocated }] = await query<{ buses_total: string; buses_allocated: string }>(
+    `SELECT COUNT(DISTINCT b.id) AS buses_total, COUNT(DISTINCT b.id) FILTER (WHERE p.id IS NOT NULL) AS buses_allocated
+    FROM buses b LEFT JOIN pilgrims p ON p.bus_number = b.number AND p.company_id = b.company_id
+    WHERE b.company_id = $1`,
+    [companyId]
+  );
+  const [{ hotels_total, rooms_total }] = await query<{ hotels_total: string; rooms_total: string }>(
+    'SELECT COUNT(*) AS hotels_total, COALESCE(SUM(total_rooms), 0) AS rooms_total FROM hotels WHERE company_id = $1',
+    [companyId]
+  );
+  const [{ flights_total }] = await query<{ flights_total: string }>(
+    'SELECT COUNT(*) AS flights_total FROM flights WHERE company_id = $1',
+    [companyId]
+  );
+  const [{ groups_total }] = await query<{ groups_total: string }>(
+    'SELECT COUNT(*) AS groups_total FROM group_leaders WHERE company_id = $1',
+    [companyId]
+  );
   const [{ nationalities_count }] = await query<{ nationalities_count: string }>(
-    'SELECT COUNT(DISTINCT nationality) AS nationalities_count FROM pilgrims'
+    'SELECT COUNT(DISTINCT nationality) AS nationalities_count FROM pilgrims WHERE company_id = $1',
+    [companyId]
   );
 
   return {
@@ -121,16 +133,18 @@ export interface RegistrationMonth {
   count: number;
 }
 
-export async function getRegistrationTimeline(): Promise<RegistrationMonth[]> {
-  const rows = await query<{ month_start: string; month: string; count: string }>(`
-    SELECT
+export async function getRegistrationTimeline(companyId: string): Promise<RegistrationMonth[]> {
+  const rows = await query<{ month_start: string; month: string; count: string }>(
+    `SELECT
       date_trunc('month', registered_at::date) AS month_start,
       to_char(date_trunc('month', registered_at::date), 'Mon YY') AS month,
       SUM(COUNT(*)) OVER (ORDER BY date_trunc('month', registered_at::date)) AS count
     FROM pilgrims
+    WHERE company_id = $1
     GROUP BY date_trunc('month', registered_at::date)
-    ORDER BY month_start
-  `);
+    ORDER BY month_start`,
+    [companyId]
+  );
   return rows.map((r) => ({ month: r.month, count: Number(r.count) }));
 }
 
@@ -139,17 +153,19 @@ export interface MonthlyCollection {
   collected: number;
 }
 
-export async function getMonthlyCollections(): Promise<MonthlyCollection[]> {
-  const rows = await query<{ month_start: string; month: string; collected: string }>(`
-    SELECT
-      date_trunc('month', paid_on) AS month_start,
-      to_char(date_trunc('month', paid_on), 'Mon YY') AS month,
-      SUM(amount) AS collected
-    FROM payments
-    WHERE status = 'cleared'
-    GROUP BY date_trunc('month', paid_on)
-    ORDER BY month_start
-  `);
+export async function getMonthlyCollections(companyId: string): Promise<MonthlyCollection[]> {
+  const rows = await query<{ month_start: string; month: string; collected: string }>(
+    `SELECT
+      date_trunc('month', pay.paid_on) AS month_start,
+      to_char(date_trunc('month', pay.paid_on), 'Mon YY') AS month,
+      SUM(pay.amount) AS collected
+    FROM payments pay
+    JOIN pilgrims p ON p.id = pay.pilgrim_id
+    WHERE pay.status = 'cleared' AND p.company_id = $1
+    GROUP BY date_trunc('month', pay.paid_on)
+    ORDER BY month_start`,
+    [companyId]
+  );
   return rows.map((r) => ({ month: r.month, collected: Number(r.collected) }));
 }
 

@@ -186,7 +186,7 @@ export default function MetricsBentoGrid({ stats }: { stats: CampaignStats }) {
       <MetricCard
         label="Buses Allocated"
         value={`${s.busesAllocated}/${s.busesTotal}`}
-        sub={`${Math.round((s.busesAllocated / s.busesTotal) * 100)}% operational`}
+        sub={`${s.busesTotal > 0 ? Math.round((s.busesAllocated / s.busesTotal) * 100) : 0}% operational`}
         icon={Bus}
         iconBg="bg-secondary"
         iconColor="text-primary"

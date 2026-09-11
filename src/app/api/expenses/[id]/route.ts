@@ -12,6 +12,6 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   if (!Number.isFinite(numericId)) {
     return NextResponse.json({ error: 'Invalid expense id.' }, { status: 400 });
   }
-  await deleteExpense(numericId);
+  await deleteExpense(numericId, session.companyId);
   return NextResponse.json({ ok: true });
 }

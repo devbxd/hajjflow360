@@ -1,6 +1,7 @@
 import React from 'react';
-import { notFound } from 'next/navigation';
+import { notFound, redirect } from 'next/navigation';
 import AppLayout from '@/components/AppLayout';
+import { getCurrentUser } from '@/lib/auth/currentUser';
 import { getPilgrimById, getPaymentsForPilgrim } from '@/lib/data/pilgrims';
 import { getGroupLeaders } from '@/lib/data/groupLeaders';
 import { getHotels } from '@/lib/data/logistics';
@@ -10,18 +11,21 @@ import PilgrimInfoPanels from './components/PilgrimInfoPanels';
 import PilgrimSidebar from './components/PilgrimSidebar';
 
 export default async function PilgrimProfilePage({ params }: { params: Promise<{ id: string }> }) {
+  const session = await getCurrentUser();
+  if (!session) redirect('/login');
+
   const { id } = await params;
-  const pilgrim = await getPilgrimById(id);
+  const pilgrim = await getPilgrimById(id, session.companyId);
 
   if (!pilgrim) {
     notFound();
   }
 
   const [paymentHistory, groupLeaders, hotels, activity] = await Promise.all([
-    getPaymentsForPilgrim(id),
-    getGroupLeaders(),
-    getHotels(),
-    getActivityForPilgrim(id),
+    getPaymentsForPilgrim(id, session.companyId),
+    getGroupLeaders(session.companyId),
+    getHotels(session.companyId),
+    getActivityForPilgrim(id, session.companyId),
   ]);
 
   const makkahHotel = hotels.find((h) => h.name === pilgrim.hotelMakkah);

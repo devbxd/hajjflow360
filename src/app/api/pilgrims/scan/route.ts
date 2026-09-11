@@ -47,8 +47,8 @@ export async function POST(req: NextRequest) {
     fromOcrScan: true,
   };
 
-  const id = await createPilgrim(input);
-  await logActivity('passport', `${input.name} (${id}) auto-registered by ${session.displayName} via passport scan`, 'scan');
+  const id = await createPilgrim(input, session.companyId);
+  await logActivity('passport', `${input.name} (${id}) auto-registered by ${session.displayName} via passport scan`, 'scan', session.companyId);
 
   return NextResponse.json({ ok: true, id });
 }

@@ -4,16 +4,18 @@ export interface AppUser {
   username: string;
   displayName: string;
   passwordHash: string;
+  companyId: string;
 }
 
 interface StaffUserRow {
   username: string;
   display_name: string;
   password_hash: string;
+  company_id: string;
 }
 
 function mapRow(row: StaffUserRow): AppUser {
-  return { username: row.username, displayName: row.display_name, passwordHash: row.password_hash };
+  return { username: row.username, displayName: row.display_name, passwordHash: row.password_hash, companyId: row.company_id };
 }
 
 export async function findUser(username: string): Promise<AppUser | undefined> {

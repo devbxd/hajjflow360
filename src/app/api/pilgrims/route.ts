@@ -47,8 +47,8 @@ export async function POST(req: NextRequest) {
     fromOcrScan: Boolean(body.fromOcrScan),
   };
 
-  const id = await createPilgrim(input);
-  await logActivity('passport', `${input.name} (${id}) registered by ${session.displayName}${input.fromOcrScan ? ' via passport scan' : ''}`, input.fromOcrScan ? 'scan' : 'check');
+  const id = await createPilgrim(input, session.companyId);
+  await logActivity('passport', `${input.name} (${id}) registered by ${session.displayName}${input.fromOcrScan ? ' via passport scan' : ''}`, input.fromOcrScan ? 'scan' : 'check', session.companyId);
 
   return NextResponse.json({ ok: true, id });
 }

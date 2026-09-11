@@ -21,8 +21,8 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'No ids provided.' }, { status: 400 });
   }
 
-  await deletePilgrims(ids);
-  await logActivity('pilgrim', `${ids.length} pilgrims removed from campaign by ${session.displayName}`, 'alert');
+  await deletePilgrims(ids, session.companyId);
+  await logActivity('pilgrim', `${ids.length} pilgrims removed from campaign by ${session.displayName}`, 'alert', session.companyId);
 
   return NextResponse.json({ ok: true, count: ids.length });
 }

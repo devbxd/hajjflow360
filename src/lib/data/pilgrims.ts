@@ -91,18 +91,18 @@ const BASE_SELECT = `
   JOIN group_leaders gl ON gl.group_id = pv.group_id
 `;
 
-export async function getAllPilgrims(): Promise<Pilgrim[]> {
-  const rows = await query<PilgrimRow>(`${BASE_SELECT} ORDER BY pv.id`);
+export async function getAllPilgrims(companyId: string): Promise<Pilgrim[]> {
+  const rows = await query<PilgrimRow>(`${BASE_SELECT} WHERE pv.company_id = $1 ORDER BY pv.id`, [companyId]);
   return rows.map(mapRow);
 }
 
-export async function getPilgrimById(id: string): Promise<Pilgrim | null> {
-  const rows = await query<PilgrimRow>(`${BASE_SELECT} WHERE pv.id = $1`, [id]);
+export async function getPilgrimById(id: string, companyId: string): Promise<Pilgrim | null> {
+  const rows = await query<PilgrimRow>(`${BASE_SELECT} WHERE pv.id = $1 AND pv.company_id = $2`, [id, companyId]);
   return rows.length ? mapRow(rows[0]) : null;
 }
 
-export async function getPilgrimsByGroup(groupId: string): Promise<Pilgrim[]> {
-  const rows = await query<PilgrimRow>(`${BASE_SELECT} WHERE pv.group_id = $1 ORDER BY pv.id`, [groupId]);
+export async function getPilgrimsByGroup(groupId: string, companyId: string): Promise<Pilgrim[]> {
+  const rows = await query<PilgrimRow>(`${BASE_SELECT} WHERE pv.group_id = $1 AND pv.company_id = $2 ORDER BY pv.id`, [groupId, companyId]);
   return rows.map(mapRow);
 }
 
@@ -133,7 +133,7 @@ function ageFromDob(dob: string): number {
   return Math.max(0, age);
 }
 
-export async function createPilgrim(input: NewPilgrimInput): Promise<string> {
+export async function createPilgrim(input: NewPilgrimInput, companyId: string): Promise<string> {
   const [{ next_seq }] = await query<{ next_seq: string }>(
     `SELECT COALESCE(MAX(NULLIF(regexp_replace(id, '\\D', '', 'g'), '')::int), 0) + 1 AS next_seq FROM pilgrims`
   );
@@ -144,8 +144,8 @@ export async function createPilgrim(input: NewPilgrimInput): Promise<string> {
     `INSERT INTO pilgrims (
        id, name, nationality, nationality_code, passport_number, passport_expiry, passport_status,
        visa_status, flight_status, group_id, payment_total, payment_status, gender, date_of_birth, age,
-       phone, email, emergency_contact, emergency_phone, attendance_status, registered_at
-     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21)`,
+       phone, email, emergency_contact, emergency_phone, attendance_status, registered_at, company_id
+     ) VALUES ($1,$2,$3,$4,$5,$6,$7,$8,$9,$10,$11,$12,$13,$14,$15,$16,$17,$18,$19,$20,$21,$22)`,
     [
       id,
       input.name,
@@ -168,6 +168,7 @@ export async function createPilgrim(input: NewPilgrimInput): Promise<string> {
       input.emergencyPhone ?? '',
       'not-checked',
       registeredAt,
+      companyId,
     ]
   );
 
@@ -190,13 +191,13 @@ export interface UpdatePilgrimInput {
   paymentTotal: number;
 }
 
-export async function updatePilgrim(id: string, input: UpdatePilgrimInput): Promise<void> {
+export async function updatePilgrim(id: string, input: UpdatePilgrimInput, companyId: string): Promise<void> {
   await query(
     `UPDATE pilgrims SET
        name = $2, nationality = $3, nationality_code = $4, passport_number = $5, passport_expiry = $6,
        date_of_birth = $7, age = $8, gender = $9, phone = $10, email = $11,
        emergency_contact = $12, emergency_phone = $13, group_id = $14, payment_total = $15
-     WHERE id = $1`,
+     WHERE id = $1 AND company_id = $16`,
     [
       id,
       input.name,
@@ -213,26 +214,27 @@ export async function updatePilgrim(id: string, input: UpdatePilgrimInput): Prom
       input.emergencyPhone,
       input.groupId,
       input.paymentTotal,
+      companyId,
     ]
   );
 }
 
-export async function deletePilgrim(id: string): Promise<void> {
-  await query('DELETE FROM pilgrims WHERE id = $1', [id]);
+export async function deletePilgrim(id: string, companyId: string): Promise<void> {
+  await query('DELETE FROM pilgrims WHERE id = $1 AND company_id = $2', [id, companyId]);
 }
 
-export async function deletePilgrims(ids: string[]): Promise<void> {
+export async function deletePilgrims(ids: string[], companyId: string): Promise<void> {
   if (ids.length === 0) return;
-  await query('DELETE FROM pilgrims WHERE id = ANY($1)', [ids]);
+  await query('DELETE FROM pilgrims WHERE id = ANY($1) AND company_id = $2', [ids, companyId]);
 }
 
-export async function assignGroupToPilgrims(ids: string[], groupId: string): Promise<void> {
+export async function assignGroupToPilgrims(ids: string[], groupId: string, companyId: string): Promise<void> {
   if (ids.length === 0) return;
-  await query('UPDATE pilgrims SET group_id = $2 WHERE id = ANY($1)', [ids, groupId]);
+  await query('UPDATE pilgrims SET group_id = $2 WHERE id = ANY($1) AND company_id = $3', [ids, groupId, companyId]);
 }
 
-export async function updateAttendance(id: string, status: Pilgrim['attendanceStatus']): Promise<void> {
-  await query('UPDATE pilgrims SET attendance_status = $2 WHERE id = $1', [id, status]);
+export async function updateAttendance(id: string, status: Pilgrim['attendanceStatus'], companyId: string): Promise<void> {
+  await query('UPDATE pilgrims SET attendance_status = $2 WHERE id = $1 AND company_id = $3', [id, status, companyId]);
 }
 
 export interface PaymentRecord {
@@ -255,7 +257,7 @@ export interface RecentPayment {
   reference: string;
 }
 
-export async function getRecentPayments(limit = 20): Promise<RecentPayment[]> {
+export async function getRecentPayments(companyId: string, limit = 20): Promise<RecentPayment[]> {
   const rows = await query<{
     id: number; pilgrim_id: string; name: string; amount: string; payment_total: string;
     paid_on: string; method: string; reference: string;
@@ -263,10 +265,10 @@ export async function getRecentPayments(limit = 20): Promise<RecentPayment[]> {
     `SELECT pay.id, pay.pilgrim_id, p.name, pay.amount, p.payment_total, pay.paid_on, pay.method, pay.reference
      FROM payments pay
      JOIN pilgrims p ON p.id = pay.pilgrim_id
-     WHERE pay.status = 'cleared'
+     WHERE pay.status = 'cleared' AND p.company_id = $2
      ORDER BY pay.paid_on DESC, pay.id DESC
      LIMIT $1`,
-    [limit]
+    [limit, companyId]
   );
   return rows.map((r) => ({
     id: `TXN-${r.id}`,
@@ -280,10 +282,14 @@ export async function getRecentPayments(limit = 20): Promise<RecentPayment[]> {
   }));
 }
 
-export async function getPaymentsForPilgrim(pilgrimId: string): Promise<PaymentRecord[]> {
+export async function getPaymentsForPilgrim(pilgrimId: string, companyId: string): Promise<PaymentRecord[]> {
   const rows = await query<{ id: number; paid_on: string; amount: string; method: string; reference: string; status: string }>(
-    'SELECT id, paid_on, amount, method, reference, status FROM payments WHERE pilgrim_id = $1 ORDER BY paid_on DESC',
-    [pilgrimId]
+    `SELECT pay.id, pay.paid_on, pay.amount, pay.method, pay.reference, pay.status
+     FROM payments pay
+     JOIN pilgrims p ON p.id = pay.pilgrim_id
+     WHERE pay.pilgrim_id = $1 AND p.company_id = $2
+     ORDER BY pay.paid_on DESC`,
+    [pilgrimId, companyId]
   );
   return rows.map((r) => ({
     id: r.id,

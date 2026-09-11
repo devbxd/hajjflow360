@@ -68,7 +68,7 @@ export async function POST(req: NextRequest) {
         groupId: row.groupId!,
         paymentTotal: Number(row.paymentTotal) || 0,
         fromOcrScan: false,
-      });
+      }, session.companyId);
       created.push(id);
     } catch (err) {
       errors.push({ row: rowNumber, name: row.name || '(no name)', error: err instanceof Error ? err.message : 'Insert failed' });
@@ -76,7 +76,7 @@ export async function POST(req: NextRequest) {
   }
 
   if (created.length > 0) {
-    await logActivity('pilgrim', `${created.length} pilgrims imported from Excel by ${session.displayName}`, 'check');
+    await logActivity('pilgrim', `${created.length} pilgrims imported from Excel by ${session.displayName}`, 'check', session.companyId);
   }
 
   return NextResponse.json({ ok: true, createdCount: created.length, createdIds: created, errors });
