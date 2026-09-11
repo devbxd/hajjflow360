@@ -4,6 +4,7 @@ import AppLayout from '@/components/AppLayout';
 import { getCurrentUser } from '@/lib/auth/currentUser';
 import CampaignHeader from './components/CampaignHeader';
 import MetricsBentoGrid from './components/MetricsBentoGrid';
+import OperationsAlerts from './components/OperationsAlerts';
 import DashboardCharts from './components/DashboardCharts';
 import AtRiskTable from './components/AtRiskTable';
 import ActivityFeed from './components/ActivityFeed';
@@ -12,6 +13,7 @@ import { getAllPilgrims } from '@/lib/data/pilgrims';
 import { getGroupLeaders } from '@/lib/data/groupLeaders';
 import { getCampaignStats, computeAtRisk, getRegistrationTimeline } from '@/lib/data/campaign';
 import { getRecentActivity } from '@/lib/data/activity';
+import { getOperationsAlerts } from '@/lib/data/alerts';
 import type { VisaChartDatum } from './components/charts/VisaStatusChart';
 import type { GroupProgressDatum } from './components/charts/GroupProgressChart';
 
@@ -29,12 +31,13 @@ export default async function CampaignDashboardPage() {
   const session = await getCurrentUser();
   if (!session) redirect('/login');
 
-  const [pilgrims, groupLeaders, stats, registrationData, activity] = await Promise.all([
+  const [pilgrims, groupLeaders, stats, registrationData, activity, operationsAlerts] = await Promise.all([
     getAllPilgrims(session.companyId),
     getGroupLeaders(session.companyId),
     getCampaignStats(session.companyId),
     getRegistrationTimeline(session.companyId),
     getRecentActivity(session.companyId, 8),
+    getOperationsAlerts(session.companyId),
   ]);
 
   const atRisk = computeAtRisk(pilgrims, Math.max(1, Math.ceil((new Date(2027, 8, 15).getTime() - Date.now()) / 86400000)));
@@ -61,6 +64,7 @@ export default async function CampaignDashboardPage() {
   return (
     <AppLayout>
       <CampaignHeader stats={stats} pilgrims={pilgrims} />
+      <OperationsAlerts alerts={operationsAlerts} />
       <MetricsBentoGrid stats={stats} />
       <DashboardCharts
         totalPilgrims={stats.totalPilgrims}
