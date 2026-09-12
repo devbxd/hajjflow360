@@ -1,10 +1,14 @@
 'use client';
 
 import React, { useState, useMemo } from 'react';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import type { HotelRow } from '@/lib/data/logistics';
 import type { Pilgrim } from '@/lib/mockData';
-import { Building2, Users, MapPin, Bed } from 'lucide-react';
+import { Building2, Users, MapPin, Bed, PlusCircle } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
+
+const EMPTY_HOTEL_FORM = { name: '', city: 'Makkah', stars: '4', totalRooms: '', checkIn: '', checkOut: '' };
 
 const ROOM_TYPE_STYLE: Record<string, string> = {
   single: 'bg-[#EFF6FF] text-[#2563EB]',
@@ -20,8 +24,83 @@ interface HotelRoomsTabProps {
 }
 
 export default function HotelRoomsTab({ hotels, pilgrims }: HotelRoomsTabProps) {
+  const router = useRouter();
   const [selectedHotel, setSelectedHotel] = useState(hotels[0]);
   const [cityFilter, setCityFilter] = useState<'all' | 'Makkah' | 'Madinah'>('all');
+  const [addHotelOpen, setAddHotelOpen] = useState(false);
+  const [hotelForm, setHotelForm] = useState(EMPTY_HOTEL_FORM);
+  const [savingHotel, setSavingHotel] = useState(false);
+
+  const handleAddHotel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingHotel(true);
+    try {
+      const res = await fetch('/api/hotels', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ ...hotelForm, stars: Number(hotelForm.stars), totalRooms: Number(hotelForm.totalRooms) }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Failed to add hotel');
+      toast.success(`${hotelForm.name} added.`);
+      setAddHotelOpen(false);
+      setHotelForm(EMPTY_HOTEL_FORM);
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to add hotel.');
+    } finally {
+      setSavingHotel(false);
+    }
+  };
+
+  const addHotelModal = addHotelOpen && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm fade-in">
+      <div className="bg-card rounded-xl border border-border shadow-xl p-6 w-full max-w-md mx-4 slide-up">
+        <h2 className="text-base font-semibold text-foreground mb-1">Add Hotel</h2>
+        <p className="text-sm text-muted-foreground mb-4">Creates a new hotel so rooms can be assigned to it.</p>
+        <form onSubmit={handleAddHotel} className="space-y-3">
+          <div>
+            <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Hotel Name</label>
+            <input required value={hotelForm.name} onChange={(e) => setHotelForm((f) => ({ ...f, name: e.target.value }))} placeholder="Hilton Suites Makkah" className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">City</label>
+              <select value={hotelForm.city} onChange={(e) => setHotelForm((f) => ({ ...f, city: e.target.value }))} className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+                <option value="Makkah">Makkah</option>
+                <option value="Madinah">Madinah</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Stars</label>
+              <select value={hotelForm.stars} onChange={(e) => setHotelForm((f) => ({ ...f, stars: e.target.value }))} className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+                {[3, 4, 5].map((s) => <option key={s} value={s}>{s} stars</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Total Rooms</label>
+              <input required type="number" min="1" value={hotelForm.totalRooms} onChange={(e) => setHotelForm((f) => ({ ...f, totalRooms: e.target.value }))} placeholder="120" className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+            </div>
+            <div />
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Check-in (DD/MM/YYYY)</label>
+              <input required value={hotelForm.checkIn} onChange={(e) => setHotelForm((f) => ({ ...f, checkIn: e.target.value }))} placeholder="15/09/2027" className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Check-out (DD/MM/YYYY)</label>
+              <input required value={hotelForm.checkOut} onChange={(e) => setHotelForm((f) => ({ ...f, checkOut: e.target.value }))} placeholder="22/09/2027" className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+            </div>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={() => setAddHotelOpen(false)} className="btn-secondary flex-1 justify-center">Cancel</button>
+            <button type="submit" disabled={savingHotel} className="btn-primary flex-1 justify-center" style={{ opacity: savingHotel ? 0.7 : 1 }}>
+              {savingHotel ? 'Adding...' : 'Add Hotel'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 
   const filteredHotels = hotels.filter((h) => cityFilter === 'all' || h.city === cityFilter);
 
@@ -51,7 +130,19 @@ export default function HotelRoomsTab({ hotels, pilgrims }: HotelRoomsTabProps) 
   }, [rooms]);
 
   if (!selectedHotel) {
-    return <div className="card-base text-sm text-muted-foreground">No hotels configured yet.</div>;
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-foreground">Hotels</h3>
+          <button onClick={() => setAddHotelOpen(true)} className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5">
+            <PlusCircle size={13} />
+            Add Hotel
+          </button>
+        </div>
+        <div className="card-base text-sm text-muted-foreground">No hotels configured yet. Add one in Makkah or Madinah to start assigning rooms.</div>
+        {addHotelModal}
+      </div>
+    );
   }
 
   const fillPct = selectedHotel.totalRooms > 0 ? Math.round((selectedHotel.allocatedRooms / selectedHotel.totalRooms) * 100) : 0;
@@ -60,22 +151,27 @@ export default function HotelRoomsTab({ hotels, pilgrims }: HotelRoomsTabProps) 
     <div className="grid grid-cols-1 xl:grid-cols-3 2xl:grid-cols-3 gap-6">
       {/* Hotel List */}
       <div className="xl:col-span-1 card-base">
-        <div className="flex items-center justify-between mb-3">
+        <div className="flex items-center justify-between mb-3 gap-2">
           <h3 className="text-sm font-semibold text-foreground">Hotels</h3>
-          <div className="flex gap-1">
-            {(['all', 'Makkah', 'Madinah'] as const).map((city) => (
-              <button
-                key={`city-${city}`}
-                onClick={() => setCityFilter(city)}
-                className={`px-2 py-1 rounded text-xs font-medium transition-all ${
-                  cityFilter === city
-                    ? 'bg-primary text-primary-foreground'
-                    : 'bg-muted text-muted-foreground hover:bg-input'
-                }`}
-              >
-                {city === 'all' ? 'All' : city}
-              </button>
-            ))}
+          <div className="flex items-center gap-2">
+            <div className="flex gap-1">
+              {(['all', 'Makkah', 'Madinah'] as const).map((city) => (
+                <button
+                  key={`city-${city}`}
+                  onClick={() => setCityFilter(city)}
+                  className={`px-2 py-1 rounded text-xs font-medium transition-all ${
+                    cityFilter === city
+                      ? 'bg-primary text-primary-foreground'
+                      : 'bg-muted text-muted-foreground hover:bg-input'
+                  }`}
+                >
+                  {city === 'all' ? 'All' : city}
+                </button>
+              ))}
+            </div>
+            <button onClick={() => setAddHotelOpen(true)} className="btn-primary text-xs px-2.5 py-1.5 flex items-center gap-1 flex-shrink-0" title="Add Hotel">
+              <PlusCircle size={13} />
+            </button>
           </div>
         </div>
         <div className="space-y-2 max-h-[500px] overflow-y-auto scrollbar-thin pr-1">
@@ -205,6 +301,8 @@ export default function HotelRoomsTab({ hotels, pilgrims }: HotelRoomsTabProps) 
           </div>
         </div>
       </div>
+
+      {addHotelModal}
     </div>
   );
 }

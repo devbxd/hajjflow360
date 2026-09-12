@@ -117,6 +117,30 @@ export async function getFlights(companyId: string): Promise<FlightRow[]> {
   }));
 }
 
+export interface NewHotelInput {
+  name: string;
+  city: string;
+  stars: number;
+  totalRooms: number;
+  checkIn: string;
+  checkOut: string;
+}
+
+export async function createHotel(input: NewHotelInput, companyId: string): Promise<string> {
+  const [{ next_seq }] = await query<{ next_seq: string }>(
+    `SELECT COALESCE(MAX(NULLIF(regexp_replace(id, '\\D', '', 'g'), '')::int), 0) + 1 AS next_seq FROM hotels`
+  );
+  const id = `HTL-${String(next_seq).padStart(3, '0')}`;
+
+  await query(
+    `INSERT INTO hotels (id, name, city, stars, total_rooms, check_in, check_out, company_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
+    [id, input.name, input.city, input.stars, input.totalRooms, input.checkIn, input.checkOut, companyId]
+  );
+
+  return id;
+}
+
 export interface NewFlightInput {
   flightNumber: string;
   airline: string;
