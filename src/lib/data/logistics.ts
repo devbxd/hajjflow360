@@ -117,6 +117,31 @@ export async function getFlights(companyId: string): Promise<FlightRow[]> {
   }));
 }
 
+export interface NewFlightInput {
+  flightNumber: string;
+  airline: string;
+  origin: string;
+  destination: string;
+  date: string;
+  time: string;
+  status: 'confirmed' | 'pending';
+}
+
+export async function createFlight(input: NewFlightInput, companyId: string): Promise<string> {
+  const [{ next_seq }] = await query<{ next_seq: string }>(
+    `SELECT COALESCE(MAX(NULLIF(regexp_replace(id, '\\D', '', 'g'), '')::int), 0) + 1 AS next_seq FROM flights`
+  );
+  const id = `FLT-${String(next_seq).padStart(3, '0')}`;
+
+  await query(
+    `INSERT INTO flights (id, flight_number, airline, origin, destination, flight_date, flight_time, status, company_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)`,
+    [id, input.flightNumber, input.airline, input.origin, input.destination, input.date, input.time, input.status, companyId]
+  );
+
+  return id;
+}
+
 const SEAT_ROWS = ['A', 'B', 'C', 'D', 'E'];
 const SEAT_COLS = 10;
 

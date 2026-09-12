@@ -6,12 +6,22 @@ import { toast } from 'sonner';
 import type { FlightRow } from '@/lib/data/logistics';
 import type { Pilgrim } from '@/lib/mockData';
 import StatusBadge from '@/components/ui/StatusBadge';
-import { Plane, Users, Clock, CheckCircle2, Download, Search } from 'lucide-react';
+import { Plane, Users, Clock, CheckCircle2, Download, Search, PlusCircle } from 'lucide-react';
 
 interface FlightManifestsTabProps {
   flights: FlightRow[];
   pilgrims: Pilgrim[];
 }
+
+const EMPTY_FLIGHT_FORM = {
+  flightNumber: '',
+  airline: '',
+  origin: '',
+  destination: '',
+  date: '',
+  time: '',
+  status: 'pending' as 'confirmed' | 'pending',
+};
 
 export default function FlightManifestsTab({ flights, pilgrims }: FlightManifestsTabProps) {
   const router = useRouter();
@@ -20,9 +30,96 @@ export default function FlightManifestsTab({ flights, pilgrims }: FlightManifest
   const [assignOpen, setAssignOpen] = useState(false);
   const [selectedForFlight, setSelectedForFlight] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
+  const [addFlightOpen, setAddFlightOpen] = useState(false);
+  const [flightForm, setFlightForm] = useState(EMPTY_FLIGHT_FORM);
+  const [savingFlight, setSavingFlight] = useState(false);
+
+  const handleAddFlight = async (e: React.FormEvent) => {
+    e.preventDefault();
+    setSavingFlight(true);
+    try {
+      const res = await fetch('/api/flights', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify(flightForm),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error ?? 'Failed to add flight');
+      toast.success(`Flight ${flightForm.flightNumber} added.`);
+      setAddFlightOpen(false);
+      setFlightForm(EMPTY_FLIGHT_FORM);
+      router.refresh();
+    } catch (err) {
+      toast.error(err instanceof Error ? err.message : 'Failed to add flight.');
+    } finally {
+      setSavingFlight(false);
+    }
+  };
+
+  const addFlightModal = addFlightOpen && (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm fade-in">
+      <div className="bg-card rounded-xl border border-border shadow-xl p-6 w-full max-w-md mx-4 slide-up">
+        <h2 className="text-base font-semibold text-foreground mb-1">Add Flight</h2>
+        <p className="text-sm text-muted-foreground mb-4">Creates a new flight so pilgrims can be assigned to it.</p>
+        <form onSubmit={handleAddFlight} className="space-y-3">
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Flight Number</label>
+              <input required value={flightForm.flightNumber} onChange={(e) => setFlightForm((f) => ({ ...f, flightNumber: e.target.value }))} placeholder="SV-881" className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Airline</label>
+              <input required value={flightForm.airline} onChange={(e) => setFlightForm((f) => ({ ...f, airline: e.target.value }))} placeholder="Saudia" className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Origin</label>
+              <input required value={flightForm.origin} onChange={(e) => setFlightForm((f) => ({ ...f, origin: e.target.value }))} placeholder="Beirut (BEY)" className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Destination</label>
+              <input required value={flightForm.destination} onChange={(e) => setFlightForm((f) => ({ ...f, destination: e.target.value }))} placeholder="Jeddah (JED)" className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Date (DD/MM/YYYY)</label>
+              <input required value={flightForm.date} onChange={(e) => setFlightForm((f) => ({ ...f, date: e.target.value }))} placeholder="15/09/2027" className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Time</label>
+              <input required value={flightForm.time} onChange={(e) => setFlightForm((f) => ({ ...f, time: e.target.value }))} placeholder="14:30" className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+            </div>
+            <div className="col-span-2">
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Status</label>
+              <select value={flightForm.status} onChange={(e) => setFlightForm((f) => ({ ...f, status: e.target.value as 'confirmed' | 'pending' }))} className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+                <option value="pending">Pending</option>
+                <option value="confirmed">Confirmed</option>
+              </select>
+            </div>
+          </div>
+          <div className="flex gap-3 pt-2">
+            <button type="button" onClick={() => setAddFlightOpen(false)} className="btn-secondary flex-1 justify-center">Cancel</button>
+            <button type="submit" disabled={savingFlight} className="btn-primary flex-1 justify-center" style={{ opacity: savingFlight ? 0.7 : 1 }}>
+              {savingFlight ? 'Adding...' : 'Add Flight'}
+            </button>
+          </div>
+        </form>
+      </div>
+    </div>
+  );
 
   if (!selectedFlight) {
-    return <div className="card-base text-sm text-muted-foreground">No flights configured yet.</div>;
+    return (
+      <div className="space-y-4">
+        <div className="flex items-center justify-between">
+          <h3 className="text-sm font-semibold text-foreground">Flights</h3>
+          <button onClick={() => setAddFlightOpen(true)} className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5">
+            <PlusCircle size={13} />
+            Add Flight
+          </button>
+        </div>
+        <div className="card-base text-sm text-muted-foreground">No flights configured yet. Add one to start assigning pilgrims.</div>
+        {addFlightModal}
+      </div>
+    );
   }
 
   const manifestPilgrims = pilgrims
@@ -88,6 +185,13 @@ export default function FlightManifestsTab({ flights, pilgrims }: FlightManifest
   return (
     <div className="space-y-6">
       {/* Flight Cards */}
+      <div className="flex items-center justify-between">
+        <h3 className="text-sm font-semibold text-foreground">Flights</h3>
+        <button onClick={() => setAddFlightOpen(true)} className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5">
+          <PlusCircle size={13} />
+          Add Flight
+        </button>
+      </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
         {flights.map((flight) => {
           const isSelected = selectedFlight.id === flight.id;
@@ -274,6 +378,8 @@ export default function FlightManifestsTab({ flights, pilgrims }: FlightManifest
           </div>
         </div>
       )}
+
+      {addFlightModal}
     </div>
   );
 }
