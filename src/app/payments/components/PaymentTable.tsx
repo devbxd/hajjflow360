@@ -5,6 +5,7 @@ import { ChevronDown, ChevronUp, ChevronsUpDown } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import { buildPaymentRows, type PaymentRow } from '../paymentRows';
 import type { Pilgrim } from '@/lib/mockData';
+import { useCurrency } from '@/lib/currency';
 
 type SortKey = 'name' | 'paymentTotal' | 'paymentPaid' | 'balance' | 'paymentStatus';
 type SortDir = 'asc' | 'desc';
@@ -83,7 +84,7 @@ export default function PaymentTable({ pilgrims, search, filterStatus, onVisible
     return sortDir === 'asc' ? <ChevronUp size={12} className="text-primary" /> : <ChevronDown size={12} className="text-primary" />;
   };
 
-  const fmtSAR = (n: number) => `SAR ${n.toLocaleString()}`;
+  const { format: fmtSAR } = useCurrency();
 
   return (
     <div className="card-base p-0 overflow-hidden">

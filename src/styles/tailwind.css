@@ -35,6 +35,52 @@
   --status-departed-bg: #F5F3FF;
 }
 
+.dark {
+  --background: #14171A;
+  --foreground: #EDEEF0;
+  --primary: #2E9C6C;
+  --primary-foreground: #06120C;
+  --secondary: #16241D;
+  --secondary-foreground: #4FCB93;
+  --accent: #D9B84A;
+  --accent-foreground: #1A1200;
+  --muted: #1D2124;
+  --muted-foreground: #9AA1A6;
+  --card: #1B1F22;
+  --card-foreground: #EDEEF0;
+  --border: #2B3034;
+  --input: #23282B;
+  --ring: #2E9C6C;
+
+  --status-approved: #22C55E;
+  --status-approved-bg: #0F2A1A;
+  --status-pending: #EAB308;
+  --status-pending-bg: #2B2408;
+  --status-rejected: #F87171;
+  --status-rejected-bg: #2E1414;
+  --status-processing: #60A5FA;
+  --status-processing-bg: #12203A;
+  --status-departed: #A78BFA;
+  --status-departed-bg: #221A3B;
+}
+
+/* Toggleable via the Appearance settings — off by default. */
+.no-animations,
+.no-animations * {
+  animation-duration: 0.001ms !important;
+  animation-delay: -1ms !important;
+  transition-duration: 0.001ms !important;
+}
+
+.compact-mode .card-base {
+  padding: 12px !important;
+}
+.compact-mode table td,
+.compact-mode table th {
+  padding-top: 6px !important;
+  padding-bottom: 6px !important;
+}
+
 @layer base {
   * {
     box-sizing: border-box;

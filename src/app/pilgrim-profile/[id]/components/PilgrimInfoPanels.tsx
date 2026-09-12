@@ -8,6 +8,7 @@ import type { StatusType } from '@/components/ui/StatusBadge';
 import { ChevronDown, ChevronUp, User, FileText, Globe, MapPin, CreditCard } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Icon from '@/components/ui/AppIcon';
+import { useCurrency } from '@/lib/currency';
 
 function Panel({
   title,
@@ -65,6 +66,7 @@ export default function PilgrimInfoPanels({
   makkahHotel: HotelDates | null;
   madinahHotel: HotelDates | null;
 }) {
+  const { format } = useCurrency();
   const flightBadge: StatusType = p.flightStatus === 'confirmed' ? 'approved' : p.flightStatus === 'pending' ? 'pending' : 'unallocated';
   const busBadge: StatusType = p.busNumber ? 'allocated' : 'unallocated';
   const hotelBadge: StatusType = p.hotelMakkah ? 'allocated' : 'unallocated';
@@ -189,7 +191,7 @@ export default function PilgrimInfoPanels({
           <div className="flex items-center justify-between mb-2">
             <span className="text-xs text-muted-foreground">Total Paid</span>
             <span className="text-sm font-bold text-foreground tabular-nums">
-              SAR {p.paymentPaid.toLocaleString()} / {p.paymentTotal.toLocaleString()}
+              {format(p.paymentPaid)} / {format(p.paymentTotal)}
             </span>
           </div>
           <div className="progress-bar-track">
@@ -219,7 +221,7 @@ export default function PilgrimInfoPanels({
               {paymentHistory.map((pay) => (
                 <tr key={`pay-${pay.id}`} className="table-row-hover border-b border-border/50 last:border-0">
                   <td className="py-2 text-sm">{pay.date}</td>
-                  <td className="py-2 text-sm font-semibold tabular-nums text-[#16A34A]">SAR {pay.amount.toLocaleString()}</td>
+                  <td className="py-2 text-sm font-semibold tabular-nums text-[#16A34A]">{format(pay.amount)}</td>
                   <td className="py-2 text-sm text-muted-foreground">{pay.method}</td>
                   <td className="py-2 text-xs font-mono-data text-muted-foreground">{pay.reference}</td>
                   <td className="py-2">

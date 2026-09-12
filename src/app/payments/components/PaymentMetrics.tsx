@@ -5,6 +5,7 @@ import { TrendingUp, Users, AlertTriangle, Clock, CheckCircle2, BarChart3 } from
 import type { CampaignStats } from '@/lib/data/campaign';
 import type { MonthlyCollection } from '@/lib/data/campaign';
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer } from 'recharts';
+import { useCurrency } from '@/lib/currency';
 
 interface PaymentMetricsProps {
   stats: CampaignStats;
@@ -12,13 +13,15 @@ interface PaymentMetricsProps {
 }
 
 export default function PaymentMetrics({ stats: campaignStats, monthlyCollections }: PaymentMetricsProps) {
+  const { convert, symbol, currency, format } = useCurrency();
+  const money = (amount: number) => `${currency === 'SAR' ? 'SAR ' : symbol}${(convert(amount) / 1_000_000).toFixed(2)}M`;
   const collectionRate = campaignStats.totalRevenue > 0 ? Math.round((campaignStats.collectedRevenue / campaignStats.totalRevenue) * 100) : 0;
   const outstanding = campaignStats.totalRevenue - campaignStats.collectedRevenue;
 
   const metrics = [
     {
       label: 'Total Revenue',
-      value: `SAR ${(campaignStats.totalRevenue / 1_000_000).toFixed(2)}M`,
+      value: money(campaignStats.totalRevenue),
       sub: `${campaignStats.totalPilgrims} pilgrims`,
       icon: BarChart3,
       color: 'text-primary',
@@ -26,7 +29,7 @@ export default function PaymentMetrics({ stats: campaignStats, monthlyCollection
     },
     {
       label: 'Collected',
-      value: `SAR ${(campaignStats.collectedRevenue / 1_000_000).toFixed(2)}M`,
+      value: money(campaignStats.collectedRevenue),
       sub: `${collectionRate}% collection rate`,
       icon: CheckCircle2,
       color: 'text-[#16A34A]',
@@ -34,7 +37,7 @@ export default function PaymentMetrics({ stats: campaignStats, monthlyCollection
     },
     {
       label: 'Outstanding',
-      value: `SAR ${(outstanding / 1_000_000).toFixed(2)}M`,
+      value: money(outstanding),
       sub: `${campaignStats.paymentPartial + campaignStats.paymentOverdue} pilgrims`,
       icon: Clock,
       color: 'text-[#D97706]',
@@ -106,7 +109,7 @@ export default function PaymentMetrics({ stats: campaignStats, monthlyCollection
                 tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`}
               />
               <Tooltip
-                formatter={(value: number) => [`SAR ${value.toLocaleString()}`, 'Collected']}
+                formatter={(value: number) => [format(value), 'Collected']}
                 contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid var(--border)' }}
               />
               <Bar dataKey="collected" fill="#1B6B4A" radius={[4, 4, 0, 0]} />

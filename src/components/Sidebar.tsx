@@ -5,6 +5,9 @@ import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
 import { LayoutDashboard, Users, UserCheck, ChevronLeft, ChevronRight, Plane, Building2, Bus, QrCode, Bell, Settings, LogOut, AlertTriangle, Layers, CreditCard, ScanLine, BookOpen, Receipt, TrendingUp, FileBarChart, ClipboardList } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
+import { useCurrency, CURRENCIES, type CurrencyCode } from '@/lib/currency';
+import { readSidebarCollapsedDefault } from '@/lib/preferences';
+import NotificationBell from '@/components/NotificationBell';
 
 
 interface NavCounts {
@@ -52,6 +55,11 @@ export default function Sidebar() {
   const [navCounts, setNavCounts] = useState<NavCounts | null>(null);
   const pathname = usePathname();
   const router = useRouter();
+  const { currency, setCurrency } = useCurrency();
+
+  useEffect(() => {
+    if (readSidebarCollapsedDefault()) setCollapsed(true);
+  }, []);
 
   useEffect(() => {
     fetch('/api/nav-counts')
@@ -98,6 +106,7 @@ export default function Sidebar() {
             <span className="font-semibold text-sm text-foreground truncate">ManasikPro</span>
           )}
         </div>
+        {!collapsed && <NotificationBell count={navCounts?.notifications ?? 0} />}
         <button
           onClick={() => setCollapsed(!collapsed)}
           className="p-1 rounded-md hover:bg-muted text-muted-foreground transition-colors flex-shrink-0"
@@ -166,6 +175,22 @@ export default function Sidebar() {
           );
         })}
       </nav>
+
+      {/* Display Currency */}
+      {!collapsed && (
+        <div className="px-3 pb-3">
+          <p className="px-0 pb-1 text-xs font-600 uppercase tracking-widest text-muted-foreground/60">Display Currency</p>
+          <select
+            value={currency}
+            onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
+            className="w-full text-sm border border-border rounded-lg px-2.5 py-1.5 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+          >
+            {CURRENCIES.map((c) => (
+              <option key={c.code} value={c.code}>{c.symbol} {c.label}</option>
+            ))}
+          </select>
+        </div>
+      )}
 
       {/* User */}
       <div className={`border-t border-border p-3 flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>

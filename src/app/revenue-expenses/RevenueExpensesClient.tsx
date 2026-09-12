@@ -6,6 +6,7 @@ import { BarChart, Bar, XAxis, YAxis, Tooltip, Legend, ResponsiveContainer } fro
 import { toast } from 'sonner';
 import type { CampaignStats, MonthlyCollection } from '@/lib/data/campaign';
 import type { Expense, MonthlyExpense } from '@/lib/data/finance';
+import { useCurrency } from '@/lib/currency';
 
 const EXPENSE_CATEGORIES = ['Hotels', 'Flights', 'Transport', 'Staff', 'Visas', 'Catering', 'Marketing', 'Other'];
 
@@ -17,6 +18,7 @@ interface Props {
 }
 
 export default function RevenueExpensesClient({ stats, monthlyCollections, initialExpenses, monthlyExpenses }: Props) {
+  const { format } = useCurrency();
   const [expenses, setExpenses] = useState<Expense[]>(initialExpenses);
   const [showForm, setShowForm] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -74,9 +76,9 @@ export default function RevenueExpensesClient({ stats, monthlyCollections, initi
   };
 
   const metrics = [
-    { label: 'Collected Revenue', value: `SAR ${stats.collectedRevenue.toLocaleString()}`, icon: TrendingUp, color: 'text-[#16A34A]', bg: 'bg-[#F0FDF4]' },
-    { label: 'Total Expenses', value: `SAR ${totalExpenses.toLocaleString()}`, icon: TrendingDown, color: 'text-[#DC2626]', bg: 'bg-[#FEF2F2]' },
-    { label: 'Net Profit', value: `SAR ${netProfit.toLocaleString()}`, icon: Wallet, color: netProfit >= 0 ? 'text-primary' : 'text-[#DC2626]', bg: netProfit >= 0 ? 'bg-primary/10' : 'bg-[#FEF2F2]' },
+    { label: 'Collected Revenue', value: format(stats.collectedRevenue), icon: TrendingUp, color: 'text-[#16A34A]', bg: 'bg-[#F0FDF4]' },
+    { label: 'Total Expenses', value: format(totalExpenses), icon: TrendingDown, color: 'text-[#DC2626]', bg: 'bg-[#FEF2F2]' },
+    { label: 'Net Profit', value: format(netProfit), icon: Wallet, color: netProfit >= 0 ? 'text-primary' : 'text-[#DC2626]', bg: netProfit >= 0 ? 'bg-primary/10' : 'bg-[#FEF2F2]' },
   ];
 
   return (
@@ -122,7 +124,7 @@ export default function RevenueExpensesClient({ stats, monthlyCollections, initi
             <BarChart data={chartData} barCategoryGap="30%">
               <XAxis dataKey="month" tick={{ fontSize: 11, fill: '#6B6560' }} axisLine={false} tickLine={false} />
               <YAxis tick={{ fontSize: 10, fill: '#6B6560' }} axisLine={false} tickLine={false} tickFormatter={(v) => `${(v / 1000).toFixed(0)}k`} />
-              <Tooltip formatter={(value: number) => `SAR ${value.toLocaleString()}`} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid var(--border)' }} />
+              <Tooltip formatter={(value: number) => format(value)} contentStyle={{ fontSize: 12, borderRadius: 8, border: '1px solid var(--border)' }} />
               <Legend wrapperStyle={{ fontSize: 12 }} />
               <Bar dataKey="collected" name="Collected" fill="#1B6B4A" radius={[4, 4, 0, 0]} />
               <Bar dataKey="spent" name="Spent" fill="#DC2626" radius={[4, 4, 0, 0]} />
@@ -153,7 +155,7 @@ export default function RevenueExpensesClient({ stats, monthlyCollections, initi
                     <td className="py-2.5 px-3 font-medium text-foreground">{e.description}</td>
                     <td className="py-2.5 px-3 text-xs text-muted-foreground">{e.category}</td>
                     <td className="py-2.5 px-3 text-xs text-muted-foreground whitespace-nowrap">{e.spentOn}</td>
-                    <td className="py-2.5 px-3 font-mono-data text-sm font-semibold text-[#DC2626]">SAR {e.amount.toLocaleString()}</td>
+                    <td className="py-2.5 px-3 font-mono-data text-sm font-semibold text-[#DC2626]">{format(e.amount)}</td>
                     <td className="py-2.5 px-3">
                       <button onClick={() => handleDelete(e.id)} className="p-1.5 rounded hover:bg-[#FEF2F2] text-muted-foreground hover:text-[#DC2626]" title="Remove expense">
                         <Trash2 size={13} />

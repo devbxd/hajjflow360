@@ -6,8 +6,10 @@ import StatusBadge from '@/components/ui/StatusBadge';
 import { ChevronLeft, Edit2, Printer, MessageSquare } from 'lucide-react';
 import Link from 'next/link';
 import EditPilgrimModal from '@/app/pilgrim-management/components/EditPilgrimModal';
+import { useCurrency } from '@/lib/currency';
 
 export default function PilgrimProfileHeader({ pilgrim: p, groupLeaders }: { pilgrim: Pilgrim; groupLeaders: GroupLeader[] }) {
+  const { format } = useCurrency();
   const paymentPct = Math.round((p.paymentPaid / p.paymentTotal) * 100);
   const [editing, setEditing] = useState(false);
 
@@ -95,7 +97,7 @@ export default function PilgrimProfileHeader({ pilgrim: p, groupLeaders }: { pil
                 <div className="progress-bar-fill" style={{ width: `${paymentPct}%` }} />
               </div>
               <span className="text-xs font-semibold tabular-nums text-foreground whitespace-nowrap">
-                SAR {p.paymentPaid.toLocaleString()} / {p.paymentTotal.toLocaleString()} ({paymentPct}%)
+                {format(p.paymentPaid)} / {format(p.paymentTotal)} ({paymentPct}%)
               </span>
             </div>
           </div>

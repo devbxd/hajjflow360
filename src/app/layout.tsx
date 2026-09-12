@@ -35,7 +35,15 @@ export default function RootLayout({
   children,
 }: Readonly<{ children: React.ReactNode }>) {
   return (
-    <html lang="en" className={`${plusJakartaSans.variable} ${ibmPlexMono.variable}`}>
+    <html lang="en" className={`${plusJakartaSans.variable} ${ibmPlexMono.variable}`} suppressHydrationWarning>
+      <head>
+        <script
+          // Runs before paint so a stored dark/system preference doesn't flash light first.
+          dangerouslySetInnerHTML={{
+            __html: `(function(){try{var t=localStorage.getItem('manasikpro_theme');var d=t==='dark'||(t==='system'&&window.matchMedia('(prefers-color-scheme: dark)').matches);if(d)document.documentElement.classList.add('dark');}catch(e){}})();`,
+          }}
+        />
+      </head>
       <body className={plusJakartaSans.className}>{children}</body>
     </html>
   );

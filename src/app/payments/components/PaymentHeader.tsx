@@ -4,6 +4,7 @@ import React from 'react';
 import { Download, CreditCard, Search } from 'lucide-react';
 import type { CampaignStats } from '@/lib/data/campaign';
 import type { PaymentRow } from '../paymentRows';
+import { useCurrency } from '@/lib/currency';
 
 interface PaymentHeaderProps {
   stats: CampaignStats;
@@ -22,6 +23,8 @@ const STATUS_LABEL: Record<PaymentRow['paymentStatus'], string> = {
 };
 
 export default function PaymentHeader({ stats: campaignStats, search, filterStatus, onSearchChange, onFilterChange, exportRows }: PaymentHeaderProps) {
+  const { convert, symbol, currency } = useCurrency();
+  const money = (amount: number) => `${currency === 'SAR' ? 'SAR ' : symbol}${(convert(amount) / 1_000_000).toFixed(2)}M`;
   const collectionRate = campaignStats.totalRevenue > 0 ? Math.round((campaignStats.collectedRevenue / campaignStats.totalRevenue) * 100) : 0;
 
   const handleExport = () => {
@@ -62,8 +65,7 @@ export default function PaymentHeader({ stats: campaignStats, search, filterStat
             <p className="text-sm text-muted-foreground">
               Collection rate{' '}
               <span className="font-semibold text-primary">{collectionRate}%</span> ·{' '}
-              SAR {(campaignStats.collectedRevenue / 1_000_000).toFixed(2)}M collected of SAR{' '}
-              {(campaignStats.totalRevenue / 1_000_000).toFixed(2)}M total
+              {money(campaignStats.collectedRevenue)} collected of {money(campaignStats.totalRevenue)} total
             </p>
           </div>
         </div>

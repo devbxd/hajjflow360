@@ -3,6 +3,7 @@
 import React, { useMemo, useState } from 'react';
 import { Receipt, Search, Printer } from 'lucide-react';
 import type { RecentPayment } from '@/lib/data/pilgrims';
+import { useCurrency } from '@/lib/currency';
 
 function openReceipt(payment: RecentPayment) {
   const html = `<!doctype html>
@@ -42,6 +43,7 @@ function openReceipt(payment: RecentPayment) {
 }
 
 export default function InvoicingReceiptsClient({ payments }: { payments: RecentPayment[] }) {
+  const { format } = useCurrency();
   const [search, setSearch] = useState('');
 
   const filtered = useMemo(() => {
@@ -63,7 +65,7 @@ export default function InvoicingReceiptsClient({ payments }: { payments: Recent
           </div>
           <div>
             <h1 className="text-2xl font-semibold text-foreground">Invoicing &amp; Receipts</h1>
-            <p className="text-sm text-muted-foreground mt-1">{filtered.length} receipts · SAR {totalAmount.toLocaleString()} total</p>
+            <p className="text-sm text-muted-foreground mt-1">{filtered.length} receipts · {format(totalAmount)} total</p>
           </div>
         </div>
         <div className="relative">
@@ -107,7 +109,7 @@ export default function InvoicingReceiptsClient({ payments }: { payments: Recent
                     <td className="py-2.5 px-3 text-xs text-muted-foreground capitalize">{p.method}</td>
                     <td className="py-2.5 px-3 font-mono-data text-xs text-muted-foreground">{p.reference}</td>
                     <td className="py-2.5 px-3 text-xs text-muted-foreground capitalize">{p.type}</td>
-                    <td className="py-2.5 px-3 font-mono-data text-sm font-semibold text-foreground">SAR {p.amount.toLocaleString()}</td>
+                    <td className="py-2.5 px-3 font-mono-data text-sm font-semibold text-foreground">{format(p.amount)}</td>
                     <td className="py-2.5 px-3">
                       <button onClick={() => openReceipt(p)} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary" title="Print receipt">
                         <Printer size={14} />

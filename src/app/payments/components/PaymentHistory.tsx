@@ -3,6 +3,7 @@
 import React, { useState } from 'react';
 import { History, TrendingUp } from 'lucide-react';
 import type { RecentPayment } from '@/lib/data/pilgrims';
+import { useCurrency } from '@/lib/currency';
 
 const typeConfig = {
   full: { label: 'Full', color: 'text-[#16A34A] bg-[#F0FDF4]' },
@@ -10,6 +11,7 @@ const typeConfig = {
 };
 
 export default function PaymentHistory({ transactions }: { transactions: RecentPayment[] }) {
+  const { format } = useCurrency();
   const [filter, setFilter] = useState<'all' | 'full' | 'installment'>('all');
 
   const filtered = filter === 'all' ? transactions : transactions.filter((t) => t.type === filter);
@@ -25,7 +27,7 @@ export default function PaymentHistory({ transactions }: { transactions: RecentP
           </div>
           <div className="flex items-center gap-1 text-xs text-[#16A34A] font-medium">
             <TrendingUp size={12} />
-            <span>SAR {(totalShown / 1000).toFixed(0)}K shown</span>
+            <span>{format(totalShown)} shown</span>
           </div>
         </div>
         <div className="flex gap-1">
@@ -60,7 +62,7 @@ export default function PaymentHistory({ transactions }: { transactions: RecentP
                 </div>
                 <div className="text-right flex-shrink-0">
                   <p className="text-sm font-semibold font-mono-data text-[#16A34A]">
-                    +SAR {txn.amount.toLocaleString()}
+                    +{format(txn.amount)}
                   </p>
                   <p className="text-xs text-muted-foreground mt-0.5">{txn.date}</p>
                 </div>

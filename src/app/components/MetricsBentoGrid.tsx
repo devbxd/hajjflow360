@@ -1,7 +1,10 @@
+'use client';
+
 import React from 'react';
 import type { CampaignStats } from '@/lib/data/campaign';
 import { Users, CreditCard, Bus, Building2, Plane, AlertTriangle } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
+import { useCurrency } from '@/lib/currency';
 
 
 function MetricCard({
@@ -108,6 +111,8 @@ function ProgressCard({
 
 export default function MetricsBentoGrid({ stats }: { stats: CampaignStats }) {
   const s = stats;
+  const { convert, symbol, currency } = useCurrency();
+  const money = (amount: number) => `${currency === 'SAR' ? 'SAR ' : symbol}${(convert(amount) / 1_000_000).toFixed(2)}M`;
   const collectionPct = s.totalRevenue > 0 ? Math.round((s.collectedRevenue / s.totalRevenue) * 100) : 0;
 
   return (
@@ -156,7 +161,7 @@ export default function MetricsBentoGrid({ stats }: { stats: CampaignStats }) {
       <MetricCard
         label="Revenue Collected"
         value={`${collectionPct}%`}
-        sub={`SAR ${(s.collectedRevenue / 1000000).toFixed(2)}M of ${(s.totalRevenue / 1000000).toFixed(2)}M`}
+        sub={`${money(s.collectedRevenue)} of ${money(s.totalRevenue)}`}
         icon={CreditCard}
         iconBg="bg-accent/10"
         iconColor="text-accent"
