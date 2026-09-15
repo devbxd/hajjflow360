@@ -10,19 +10,14 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
   }
   const { groupId } = await params;
 
+  let result;
   try {
-    await deleteGroupLeader(groupId, session.companyId);
+    result = await deleteGroupLeader(groupId, session.companyId);
   } catch (err) {
-    const code = (err as { code?: string })?.code;
-    if (code === '23503') {
-      return NextResponse.json(
-        { error: 'This group still has pilgrims (or buses) assigned to it. Reassign them to another group first.' },
-        { status: 409 }
-      );
-    }
-    throw err;
+    return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed to remove group leader.' }, { status: 409 });
   }
 
-  await logActivity('pilgrim', `Group leader ${groupId} removed by ${session.displayName}`, 'alert', session.companyId);
-  return NextResponse.json({ ok: true });
+  const suffix = result.movedPilgrims > 0 ? ` (${result.movedPilgrims} pilgrims moved to ${result.movedTo})` : '';
+  await logActivity('pilgrim', `Group leader ${groupId} removed by ${session.displayName}${suffix}`, 'alert', session.companyId);
+  return NextResponse.json({ ok: true, movedPilgrims: result.movedPilgrims, movedTo: result.movedTo });
 }

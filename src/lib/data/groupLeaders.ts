@@ -1,4 +1,4 @@
-import { query } from '@/lib/db';
+import { query, pool } from '@/lib/db';
 import type { GroupLeader } from '@/lib/mockData';
 
 interface GroupLeaderRow {
@@ -74,9 +74,57 @@ export async function createGroupLeader(input: NewGroupLeaderInput, companyId: s
   return { id, groupId };
 }
 
-// Blocked by the DB's foreign key if pilgrims (or buses) still reference this
-// group — callers should surface that as "reassign them first", not a raw
-// SQL error.
-export async function deleteGroupLeader(groupId: string, companyId: string): Promise<void> {
-  await query('DELETE FROM group_leaders WHERE group_id = $1 AND company_id = $2', [groupId, companyId]);
+export interface DeleteGroupLeaderResult {
+  movedPilgrims: number;
+  movedTo: string | null;
+}
+
+// Pilgrims (and buses) reference this group via a NOT NULL foreign key, so
+// the group can't simply be deleted out from under them. Rather than make
+// staff go reassign everyone by hand first, this moves them onto another of
+// the company's groups automatically, then deletes — one confirmation, done.
+// Only fails if this is the company's only group (nowhere to move them to).
+export async function deleteGroupLeader(groupId: string, companyId: string): Promise<DeleteGroupLeaderResult> {
+  const client = await pool.connect();
+  try {
+    await client.query('BEGIN');
+
+    const [{ count }] = (
+      await client.query<{ count: string }>(
+        'SELECT COUNT(*) AS count FROM pilgrims WHERE group_id = $1 AND company_id = $2',
+        [groupId, companyId]
+      )
+    ).rows;
+    const pilgrimCount = Number(count);
+
+    let movedTo: string | null = null;
+    if (pilgrimCount > 0) {
+      const fallback = (
+        await client.query<{ group_id: string }>(
+          'SELECT group_id FROM group_leaders WHERE company_id = $1 AND group_id != $2 ORDER BY id LIMIT 1',
+          [companyId, groupId]
+        )
+      ).rows[0];
+
+      if (!fallback) {
+        throw new Error(
+          `This is the only group and it still has ${pilgrimCount} pilgrim${pilgrimCount > 1 ? 's' : ''}. Add another group first.`
+        );
+      }
+      movedTo = fallback.group_id;
+
+      await client.query('UPDATE pilgrims SET group_id = $1 WHERE group_id = $2 AND company_id = $3', [movedTo, groupId, companyId]);
+      await client.query('UPDATE buses SET group_id = $1 WHERE group_id = $2 AND company_id = $3', [movedTo, groupId, companyId]);
+    }
+
+    await client.query('DELETE FROM group_leaders WHERE group_id = $1 AND company_id = $2', [groupId, companyId]);
+
+    await client.query('COMMIT');
+    return { movedPilgrims: pilgrimCount, movedTo };
+  } catch (err) {
+    await client.query('ROLLBACK');
+    throw err;
+  } finally {
+    client.release();
+  }
 }
