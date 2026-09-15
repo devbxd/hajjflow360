@@ -135,10 +135,11 @@ export default function GroupLeaderHeader({ groupLeader: gl, allGroupLeaders, pi
         </button>
         <button
           onClick={() => setDeleteOpen(true)}
-          className="p-2 rounded-lg hover:bg-[#FEF2F2] text-muted-foreground hover:text-[#DC2626] transition-colors"
+          className="px-3 py-2 rounded-lg text-sm font-medium flex items-center gap-1.5 bg-[#FEF2F2] text-[#DC2626] border border-[#DC2626]/20 hover:bg-[#FEE2E2] transition-colors"
           title="Remove this group leader"
         >
-          <Trash2 size={16} />
+          <Trash2 size={14} />
+          Delete Group
         </button>
         <button onClick={scrollToBroadcast} className="btn-primary text-sm">Send Broadcast</button>
       </div>

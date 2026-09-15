@@ -6,7 +6,8 @@ import { toast } from 'sonner';
 import type { FlightRow } from '@/lib/data/logistics';
 import type { Pilgrim } from '@/lib/mockData';
 import StatusBadge from '@/components/ui/StatusBadge';
-import { Plane, Users, Clock, CheckCircle2, Download, Search, PlusCircle, Trash2 } from 'lucide-react';
+import { Plane, Users, Clock, CheckCircle2, Download, Search, PlusCircle, Trash2, FileSpreadsheet } from 'lucide-react';
+import ImportFlightsModal from './ImportFlightsModal';
 
 interface FlightManifestsTabProps {
   flights: FlightRow[];
@@ -29,6 +30,7 @@ export default function FlightManifestsTab({ flights, pilgrims }: FlightManifest
   const [manifestSearch, setManifestSearch] = useState('');
   const [assignOpen, setAssignOpen] = useState(false);
   const [deletingFlight, setDeletingFlight] = useState<string | null>(null);
+  const [importOpen, setImportOpen] = useState(false);
 
   useEffect(() => {
     if (!flights.some((f) => f.id === selectedFlight?.id)) setSelectedFlight(flights[0]);
@@ -129,13 +131,20 @@ export default function FlightManifestsTab({ flights, pilgrims }: FlightManifest
       <div className="space-y-4">
         <div className="flex items-center justify-between">
           <h3 className="text-sm font-semibold text-foreground">Flights</h3>
-          <button onClick={() => setAddFlightOpen(true)} className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5">
-            <PlusCircle size={13} />
-            Add Flight
-          </button>
+          <div className="flex items-center gap-2">
+            <button onClick={() => setImportOpen(true)} className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5">
+              <FileSpreadsheet size={13} />
+              Import Excel
+            </button>
+            <button onClick={() => setAddFlightOpen(true)} className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5">
+              <PlusCircle size={13} />
+              Add Flight
+            </button>
+          </div>
         </div>
         <div className="card-base text-sm text-muted-foreground">No flights configured yet. Add one to start assigning pilgrims.</div>
         {addFlightModal}
+        <ImportFlightsModal open={importOpen} onClose={() => setImportOpen(false)} />
       </div>
     );
   }
@@ -205,10 +214,16 @@ export default function FlightManifestsTab({ flights, pilgrims }: FlightManifest
       {/* Flight Cards */}
       <div className="flex items-center justify-between">
         <h3 className="text-sm font-semibold text-foreground">Flights</h3>
-        <button onClick={() => setAddFlightOpen(true)} className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5">
-          <PlusCircle size={13} />
-          Add Flight
-        </button>
+        <div className="flex items-center gap-2">
+          <button onClick={() => setImportOpen(true)} className="btn-secondary text-xs px-3 py-1.5 flex items-center gap-1.5">
+            <FileSpreadsheet size={13} />
+            Import Excel
+          </button>
+          <button onClick={() => setAddFlightOpen(true)} className="btn-primary text-xs px-3 py-1.5 flex items-center gap-1.5">
+            <PlusCircle size={13} />
+            Add Flight
+          </button>
+        </div>
       </div>
       <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-3 2xl:grid-cols-6 gap-4">
         {flights.map((flight) => {
@@ -407,6 +422,7 @@ export default function FlightManifestsTab({ flights, pilgrims }: FlightManifest
       )}
 
       {addFlightModal}
+      <ImportFlightsModal open={importOpen} onClose={() => setImportOpen(false)} />
 
       {deletingFlight && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm fade-in">
