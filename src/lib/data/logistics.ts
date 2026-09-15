@@ -166,6 +166,10 @@ export async function createFlight(input: NewFlightInput, companyId: string): Pr
   return id;
 }
 
+export async function deleteFlight(id: string, companyId: string): Promise<void> {
+  await query('DELETE FROM flights WHERE id = $1 AND company_id = $2', [id, companyId]);
+}
+
 const SEAT_ROWS = ['A', 'B', 'C', 'D', 'E'];
 const SEAT_COLS = 10;
 

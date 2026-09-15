@@ -52,3 +52,31 @@ export async function getGroupLeaderByGroupId(groupId: string, companyId: string
   const rows = await query<GroupLeaderRow>(statsQuery('AND gl.group_id = $2'), [companyId, groupId]);
   return rows.length ? mapRow(rows[0]) : null;
 }
+
+export interface NewGroupLeaderInput {
+  name: string;
+  phone: string;
+}
+
+export async function createGroupLeader(input: NewGroupLeaderInput, companyId: string): Promise<{ id: string; groupId: string }> {
+  const [{ next_seq }] = await query<{ next_seq: string }>(
+    `SELECT COALESCE(MAX(NULLIF(regexp_replace(id, '\\D', '', 'g'), '')::int), 0) + 1 AS next_seq FROM group_leaders`
+  );
+  const seq = String(next_seq).padStart(3, '0');
+  const id = `GL-${seq}`;
+  const groupId = `GRP-${seq}`;
+
+  await query(
+    'INSERT INTO group_leaders (id, name, phone, group_id, company_id) VALUES ($1, $2, $3, $4, $5)',
+    [id, input.name, input.phone, groupId, companyId]
+  );
+
+  return { id, groupId };
+}
+
+// Blocked by the DB's foreign key if pilgrims (or buses) still reference this
+// group — callers should surface that as "reassign them first", not a raw
+// SQL error.
+export async function deleteGroupLeader(groupId: string, companyId: string): Promise<void> {
+  await query('DELETE FROM group_leaders WHERE group_id = $1 AND company_id = $2', [groupId, companyId]);
+}

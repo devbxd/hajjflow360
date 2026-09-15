@@ -1,12 +1,12 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useState, useEffect } from 'react';
 import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import type { FlightRow } from '@/lib/data/logistics';
 import type { Pilgrim } from '@/lib/mockData';
 import StatusBadge from '@/components/ui/StatusBadge';
-import { Plane, Users, Clock, CheckCircle2, Download, Search, PlusCircle } from 'lucide-react';
+import { Plane, Users, Clock, CheckCircle2, Download, Search, PlusCircle, Trash2 } from 'lucide-react';
 
 interface FlightManifestsTabProps {
   flights: FlightRow[];
@@ -28,6 +28,24 @@ export default function FlightManifestsTab({ flights, pilgrims }: FlightManifest
   const [selectedFlight, setSelectedFlight] = useState(flights[0]);
   const [manifestSearch, setManifestSearch] = useState('');
   const [assignOpen, setAssignOpen] = useState(false);
+  const [deletingFlight, setDeletingFlight] = useState<string | null>(null);
+
+  useEffect(() => {
+    if (!flights.some((f) => f.id === selectedFlight?.id)) setSelectedFlight(flights[0]);
+  }, [flights, selectedFlight]);
+
+  const handleDeleteFlight = async (id: string) => {
+    try {
+      const res = await fetch(`/api/flights/${id}`, { method: 'DELETE' });
+      if (!res.ok) throw new Error();
+      toast.success('Flight removed.');
+      router.refresh();
+    } catch {
+      toast.error('Failed to remove flight.');
+    } finally {
+      setDeletingFlight(null);
+    }
+  };
   const [selectedForFlight, setSelectedForFlight] = useState<Set<string>>(new Set());
   const [saving, setSaving] = useState(false);
   const [addFlightOpen, setAddFlightOpen] = useState(false);
@@ -197,16 +215,25 @@ export default function FlightManifestsTab({ flights, pilgrims }: FlightManifest
           const isSelected = selectedFlight.id === flight.id;
           const confPct = flight.passengers > 0 ? Math.round((flight.confirmed / flight.passengers) * 100) : 0;
           return (
-            <button
+            <div
               key={`flt-${flight.id}`}
               onClick={() => setSelectedFlight(flight)}
-              className={`text-left p-4 rounded-xl border transition-all ${
+              role="button"
+              tabIndex={0}
+              className={`relative text-left p-4 rounded-xl border transition-all cursor-pointer ${
                 isSelected
                   ? 'bg-secondary border-primary/30 shadow-sm'
                   : 'bg-card border-border hover:bg-muted'
               }`}
             >
-              <div className="flex items-center justify-between mb-2">
+              <button
+                onClick={(e) => { e.stopPropagation(); setDeletingFlight(flight.id); }}
+                className="absolute top-2 right-2 p-1 rounded hover:bg-[#FEF2F2] text-muted-foreground hover:text-[#DC2626] transition-colors"
+                title="Remove flight"
+              >
+                <Trash2 size={12} />
+              </button>
+              <div className="flex items-center justify-between mb-2 pr-5">
                 <div className="flex items-center gap-2">
                   <Plane size={14} className={isSelected ? 'text-primary' : 'text-muted-foreground'} />
                   <span className={`text-sm font-bold font-mono-data ${isSelected ? 'text-primary' : 'text-foreground'}`}>
@@ -224,7 +251,7 @@ export default function FlightManifestsTab({ flights, pilgrims }: FlightManifest
               <p className="text-xs text-muted-foreground mt-1 tabular-nums">
                 {flight.confirmed}/{flight.passengers} confirmed
               </p>
-            </button>
+            </div>
           );
         })}
       </div>
@@ -380,6 +407,26 @@ export default function FlightManifestsTab({ flights, pilgrims }: FlightManifest
       )}
 
       {addFlightModal}
+
+      {deletingFlight && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm fade-in">
+          <div className="bg-card rounded-xl border border-border shadow-xl p-6 w-full max-w-sm mx-4 slide-up">
+            <h2 className="text-base font-semibold text-foreground mb-2">Remove Flight</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              This cannot be undone. Pilgrims already assigned to this flight will keep showing it until reassigned.
+            </p>
+            <div className="flex gap-3">
+              <button onClick={() => setDeletingFlight(null)} className="btn-secondary flex-1 justify-center">Cancel</button>
+              <button
+                onClick={() => handleDeleteFlight(deletingFlight)}
+                className="flex-1 justify-center px-4 py-2 bg-[#DC2626] text-white rounded-lg text-sm font-medium hover:bg-[#B91C1C] transition-colors"
+              >
+                Remove Flight
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
