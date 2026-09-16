@@ -170,6 +170,25 @@ export async function deleteFlight(id: string, companyId: string): Promise<void>
   await query('DELETE FROM flights WHERE id = $1 AND company_id = $2', [id, companyId]);
 }
 
+export interface ReassignRoomInput {
+  pilgrimId: string;
+  city: 'Makkah' | 'Madinah';
+  hotelName: string;
+  roomNumber: string;
+  roomType: 'single' | 'double' | 'triple' | 'quad';
+}
+
+// Which hotel/room column gets updated depends on the leg (Makkah vs
+// Madinah) of the hotel being viewed — the pilgrim's other leg, if any, is
+// left untouched.
+export async function reassignRoom(input: ReassignRoomInput, companyId: string): Promise<void> {
+  const hotelColumn = input.city === 'Makkah' ? 'hotel_makkah' : 'hotel_madinah';
+  await query(
+    `UPDATE pilgrims SET ${hotelColumn} = $2, room_number = $3, room_type = $4 WHERE id = $1 AND company_id = $5`,
+    [input.pilgrimId, input.hotelName, input.roomNumber, input.roomType, companyId]
+  );
+}
+
 const SEAT_ROWS = ['A', 'B', 'C', 'D', 'E'];
 const SEAT_COLS = 10;
 

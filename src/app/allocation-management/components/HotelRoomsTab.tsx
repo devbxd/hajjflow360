@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation';
 import { toast } from 'sonner';
 import type { HotelRow } from '@/lib/data/logistics';
 import type { Pilgrim } from '@/lib/mockData';
-import { Building2, Users, MapPin, Bed, PlusCircle } from 'lucide-react';
+import { Building2, Users, MapPin, Bed, PlusCircle, ArrowRightLeft } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 
 const EMPTY_HOTEL_FORM = { name: '', city: 'Makkah', stars: '4', totalRooms: '', checkIn: '', checkOut: '' };
@@ -30,6 +30,9 @@ export default function HotelRoomsTab({ hotels, pilgrims }: HotelRoomsTabProps) 
   const [addHotelOpen, setAddHotelOpen] = useState(false);
   const [hotelForm, setHotelForm] = useState(EMPTY_HOTEL_FORM);
   const [savingHotel, setSavingHotel] = useState(false);
+  const [reassignGuest, setReassignGuest] = useState<Pilgrim | null>(null);
+  const [reassignForm, setReassignForm] = useState({ hotelName: '', roomNumber: '', roomType: 'double' as 'single' | 'double' | 'triple' | 'quad' });
+  const [reassigning, setReassigning] = useState(false);
 
   const handleAddHotel = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -50,6 +53,42 @@ export default function HotelRoomsTab({ hotels, pilgrims }: HotelRoomsTabProps) 
       toast.error(err instanceof Error ? err.message : 'Failed to add hotel.');
     } finally {
       setSavingHotel(false);
+    }
+  };
+
+  const openReassign = (guest: Pilgrim) => {
+    setReassignGuest(guest);
+    setReassignForm({ hotelName: '', roomNumber: guest.roomNumber ?? '', roomType: (guest.roomType as typeof reassignForm.roomType) ?? 'double' });
+  };
+
+  const handleReassign = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reassignGuest || !selectedHotel) return;
+    if (!reassignForm.hotelName) {
+      toast.error('Choose a hotel.');
+      return;
+    }
+    setReassigning(true);
+    try {
+      const res = await fetch('/api/allocation/assign-room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pilgrimId: reassignGuest.id,
+          city: selectedHotel.city,
+          hotelName: reassignForm.hotelName,
+          roomNumber: reassignForm.roomNumber,
+          roomType: reassignForm.roomType,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(`${reassignGuest.name} moved to ${reassignForm.hotelName}, room ${reassignForm.roomNumber}.`);
+      setReassignGuest(null);
+      router.refresh();
+    } catch {
+      toast.error('Failed to reassign room.');
+    } finally {
+      setReassigning(false);
     }
   };
 
@@ -290,8 +329,21 @@ export default function HotelRoomsTab({ hotels, pilgrims }: HotelRoomsTabProps) 
                       <td className="py-2.5 px-3">
                         <StatusBadge status="allocated" size="sm" />
                       </td>
-                      <td className="py-2.5 px-3 text-sm text-muted-foreground">
-                        {room.guests.map((g) => g.name).join(', ')}
+                      <td className="py-2.5 px-3">
+                        <div className="flex flex-col gap-1">
+                          {room.guests.map((g) => (
+                            <div key={g.id} className="flex items-center gap-2">
+                              <span className="text-sm text-foreground">{g.name}</span>
+                              <button
+                                onClick={() => openReassign(g)}
+                                className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors flex-shrink-0"
+                                title="Reassign to another hotel/room"
+                              >
+                                <ArrowRightLeft size={12} />
+                              </button>
+                            </div>
+                          ))}
+                        </div>
                       </td>
                     </tr>
                   );
@@ -303,6 +355,54 @@ export default function HotelRoomsTab({ hotels, pilgrims }: HotelRoomsTabProps) 
       </div>
 
       {addHotelModal}
+
+      {reassignGuest && selectedHotel && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm fade-in">
+          <div className="bg-card rounded-xl border border-border shadow-xl p-6 w-full max-w-sm mx-4 slide-up">
+            <h2 className="text-base font-semibold text-foreground mb-1">Reassign {reassignGuest.name}</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Currently at {selectedHotel.name}, room {reassignGuest.roomNumber ?? '—'}. Choose a new {selectedHotel.city} hotel and room.
+            </p>
+            <form onSubmit={handleReassign} className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Hotel</label>
+                <select
+                  required
+                  value={reassignForm.hotelName}
+                  onChange={(e) => setReassignForm((f) => ({ ...f, hotelName: e.target.value }))}
+                  className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="">Choose a hotel...</option>
+                  {hotels.filter((h) => h.city === selectedHotel.city).map((h) => (
+                    <option key={h.id} value={h.name}>{h.name} ({h.allocatedRooms}/{h.totalRooms})</option>
+                  ))}
+                </select>
+              </div>
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Room Number</label>
+                  <input required value={reassignForm.roomNumber} onChange={(e) => setReassignForm((f) => ({ ...f, roomNumber: e.target.value }))} placeholder="412" className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring" />
+                </div>
+                <div>
+                  <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Room Type</label>
+                  <select value={reassignForm.roomType} onChange={(e) => setReassignForm((f) => ({ ...f, roomType: e.target.value as typeof reassignForm.roomType }))} className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring">
+                    <option value="single">Single</option>
+                    <option value="double">Double</option>
+                    <option value="triple">Triple</option>
+                    <option value="quad">Quad</option>
+                  </select>
+                </div>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setReassignGuest(null)} className="btn-secondary flex-1 justify-center">Cancel</button>
+                <button type="submit" disabled={reassigning} className="btn-primary flex-1 justify-center" style={{ opacity: reassigning ? 0.7 : 1 }}>
+                  {reassigning ? 'Moving...' : 'Move Pilgrim'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
