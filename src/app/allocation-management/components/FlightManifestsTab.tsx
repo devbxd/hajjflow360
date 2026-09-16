@@ -6,7 +6,7 @@ import { toast } from 'sonner';
 import type { FlightRow } from '@/lib/data/logistics';
 import type { Pilgrim } from '@/lib/mockData';
 import StatusBadge from '@/components/ui/StatusBadge';
-import { Plane, Users, Clock, CheckCircle2, Download, Search, PlusCircle, Trash2, FileSpreadsheet } from 'lucide-react';
+import { Plane, Users, Clock, CheckCircle2, Download, Search, PlusCircle, Trash2, FileSpreadsheet, ArrowRightLeft } from 'lucide-react';
 import ImportFlightsModal from './ImportFlightsModal';
 
 interface FlightManifestsTabProps {
@@ -31,6 +31,9 @@ export default function FlightManifestsTab({ flights, pilgrims }: FlightManifest
   const [assignOpen, setAssignOpen] = useState(false);
   const [deletingFlight, setDeletingFlight] = useState<string | null>(null);
   const [importOpen, setImportOpen] = useState(false);
+  const [reassignPilgrim, setReassignPilgrim] = useState<Pilgrim | null>(null);
+  const [reassignFlightNumber, setReassignFlightNumber] = useState('');
+  const [reassigning, setReassigning] = useState(false);
 
   useEffect(() => {
     if (!flights.some((f) => f.id === selectedFlight?.id)) setSelectedFlight(flights[0]);
@@ -209,6 +212,34 @@ export default function FlightManifestsTab({ flights, pilgrims }: FlightManifest
     }
   };
 
+  const openReassign = (p: Pilgrim) => {
+    setReassignPilgrim(p);
+    setReassignFlightNumber('');
+  };
+
+  const handleReassign = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!reassignPilgrim || !reassignFlightNumber) return;
+    const target = flights.find((f) => f.flightNumber === reassignFlightNumber);
+    if (!target) return;
+    setReassigning(true);
+    try {
+      const res = await fetch('/api/allocation/assign-flight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pilgrimIds: [reassignPilgrim.id], flightNumber: target.flightNumber, flightDate: target.date }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(`${reassignPilgrim.name} moved to ${target.flightNumber}.`);
+      setReassignPilgrim(null);
+      router.refresh();
+    } catch {
+      toast.error('Failed to reassign pilgrim to flight.');
+    } finally {
+      setReassigning(false);
+    }
+  };
+
   return (
     <div className="space-y-6">
       {/* Flight Cards */}
@@ -324,7 +355,7 @@ export default function FlightManifestsTab({ flights, pilgrims }: FlightManifest
           <table className="w-full text-sm">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                {['#', 'Pilgrim ID', 'Name', 'Nationality', 'Passport #', 'Seat', 'Visa', 'Gender', 'Status'].map((h) => (
+                {['#', 'Pilgrim ID', 'Name', 'Nationality', 'Passport #', 'Seat', 'Visa', 'Gender', 'Status', ''].map((h) => (
                   <th key={`mh-${h}`} className="text-left py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase tracking-wide whitespace-nowrap">
                     {h}
                   </th>
@@ -334,7 +365,7 @@ export default function FlightManifestsTab({ flights, pilgrims }: FlightManifest
             <tbody>
               {manifestPilgrims.length === 0 && (
                 <tr>
-                  <td colSpan={9} className="py-6 px-3 text-center text-sm text-muted-foreground">No pilgrims match.</td>
+                  <td colSpan={10} className="py-6 px-3 text-center text-sm text-muted-foreground">No pilgrims match.</td>
                 </tr>
               )}
               {manifestPilgrims
@@ -365,6 +396,15 @@ export default function FlightManifestsTab({ flights, pilgrims }: FlightManifest
                           status={visaStatus === 'approved' ? 'approved' : 'pending'}
                           size="sm"
                         />
+                      </td>
+                      <td className="py-2.5 px-3">
+                        <button
+                          onClick={() => openReassign(p)}
+                          className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                          title="Reassign to another flight"
+                        >
+                          <ArrowRightLeft size={13} />
+                        </button>
                       </td>
                     </tr>
                   );
@@ -423,6 +463,41 @@ export default function FlightManifestsTab({ flights, pilgrims }: FlightManifest
 
       {addFlightModal}
       <ImportFlightsModal open={importOpen} onClose={() => setImportOpen(false)} />
+
+      {reassignPilgrim && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm fade-in">
+          <div className="bg-card rounded-xl border border-border shadow-xl p-6 w-full max-w-sm mx-4 slide-up">
+            <h2 className="text-base font-semibold text-foreground mb-1">Reassign Flight</h2>
+            <p className="text-sm text-muted-foreground mb-4">
+              Move {reassignPilgrim.name} ({reassignPilgrim.id}) from {selectedFlight.flightNumber} to another flight.
+            </p>
+            <form onSubmit={handleReassign} className="space-y-3">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Destination Flight</label>
+                <select
+                  required
+                  value={reassignFlightNumber}
+                  onChange={(e) => setReassignFlightNumber(e.target.value)}
+                  className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="" disabled>Select a flight...</option>
+                  {flights.filter((f) => f.flightNumber !== selectedFlight.flightNumber).map((f) => (
+                    <option key={f.id} value={f.flightNumber}>
+                      {f.flightNumber} — {f.origin} → {f.destination} ({f.date})
+                    </option>
+                  ))}
+                </select>
+              </div>
+              <div className="flex gap-3 pt-2">
+                <button type="button" onClick={() => setReassignPilgrim(null)} className="btn-secondary flex-1 justify-center">Cancel</button>
+                <button type="submit" disabled={reassigning || !reassignFlightNumber} className="btn-primary flex-1 justify-center" style={{ opacity: reassigning ? 0.7 : 1 }}>
+                  {reassigning ? 'Moving...' : 'Move Pilgrim'}
+                </button>
+              </div>
+            </form>
+          </div>
+        </div>
+      )}
 
       {deletingFlight && (
         <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm fade-in">

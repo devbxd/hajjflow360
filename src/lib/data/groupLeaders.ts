@@ -76,29 +76,33 @@ export async function createGroupLeader(input: NewGroupLeaderInput, companyId: s
 
 export interface DeleteGroupLeaderResult {
   movedPilgrims: number;
+  movedBuses: number;
   movedTo: string | null;
 }
 
-// Pilgrims (and buses) reference this group via a NOT NULL foreign key, so
-// the group can't simply be deleted out from under them. Rather than make
-// staff go reassign everyone by hand first, this moves them onto another of
-// the company's groups automatically, then deletes — one confirmation, done.
+// Pilgrims (and buses) reference this group via a foreign key, so the group
+// can't simply be deleted out from under them. Rather than make staff go
+// reassign everyone by hand first, this moves BOTH onto another of the
+// company's groups automatically, then deletes — one confirmation, done.
 // Only fails if this is the company's only group (nowhere to move them to).
 export async function deleteGroupLeader(groupId: string, companyId: string): Promise<DeleteGroupLeaderResult> {
   const client = await pool.connect();
   try {
     await client.query('BEGIN');
 
-    const [{ count }] = (
-      await client.query<{ count: string }>(
-        'SELECT COUNT(*) AS count FROM pilgrims WHERE group_id = $1 AND company_id = $2',
+    const [{ pilgrim_count, bus_count }] = (
+      await client.query<{ pilgrim_count: string; bus_count: string }>(
+        `SELECT
+           (SELECT COUNT(*) FROM pilgrims WHERE group_id = $1 AND company_id = $2) AS pilgrim_count,
+           (SELECT COUNT(*) FROM buses WHERE group_id = $1 AND company_id = $2) AS bus_count`,
         [groupId, companyId]
       )
     ).rows;
-    const pilgrimCount = Number(count);
+    const pilgrimCount = Number(pilgrim_count);
+    const busCount = Number(bus_count);
 
     let movedTo: string | null = null;
-    if (pilgrimCount > 0) {
+    if (pilgrimCount > 0 || busCount > 0) {
       const fallback = (
         await client.query<{ group_id: string }>(
           'SELECT group_id FROM group_leaders WHERE company_id = $1 AND group_id != $2 ORDER BY id LIMIT 1',
@@ -108,19 +112,23 @@ export async function deleteGroupLeader(groupId: string, companyId: string): Pro
 
       if (!fallback) {
         throw new Error(
-          `This is the only group and it still has ${pilgrimCount} pilgrim${pilgrimCount > 1 ? 's' : ''}. Add another group first.`
+          `This is the only group and it still has ${pilgrimCount} pilgrim(s) and ${busCount} bus(es) assigned. Add another group first.`
         );
       }
       movedTo = fallback.group_id;
 
-      await client.query('UPDATE pilgrims SET group_id = $1 WHERE group_id = $2 AND company_id = $3', [movedTo, groupId, companyId]);
-      await client.query('UPDATE buses SET group_id = $1 WHERE group_id = $2 AND company_id = $3', [movedTo, groupId, companyId]);
+      if (pilgrimCount > 0) {
+        await client.query('UPDATE pilgrims SET group_id = $1 WHERE group_id = $2 AND company_id = $3', [movedTo, groupId, companyId]);
+      }
+      if (busCount > 0) {
+        await client.query('UPDATE buses SET group_id = $1 WHERE group_id = $2 AND company_id = $3', [movedTo, groupId, companyId]);
+      }
     }
 
     await client.query('DELETE FROM group_leaders WHERE group_id = $1 AND company_id = $2', [groupId, companyId]);
 
     await client.query('COMMIT');
-    return { movedPilgrims: pilgrimCount, movedTo };
+    return { movedPilgrims: pilgrimCount, movedBuses: busCount, movedTo };
   } catch (err) {
     await client.query('ROLLBACK');
     throw err;

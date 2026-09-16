@@ -17,7 +17,10 @@ export async function DELETE(_req: NextRequest, { params }: { params: Promise<{ 
     return NextResponse.json({ error: err instanceof Error ? err.message : 'Failed to remove group leader.' }, { status: 409 });
   }
 
-  const suffix = result.movedPilgrims > 0 ? ` (${result.movedPilgrims} pilgrims moved to ${result.movedTo})` : '';
+  const parts = [];
+  if (result.movedPilgrims > 0) parts.push(`${result.movedPilgrims} pilgrims`);
+  if (result.movedBuses > 0) parts.push(`${result.movedBuses} buses`);
+  const suffix = parts.length > 0 ? ` (${parts.join(' and ')} moved to ${result.movedTo})` : '';
   await logActivity('pilgrim', `Group leader ${groupId} removed by ${session.displayName}${suffix}`, 'alert', session.companyId);
-  return NextResponse.json({ ok: true, movedPilgrims: result.movedPilgrims, movedTo: result.movedTo });
+  return NextResponse.json({ ok: true, movedPilgrims: result.movedPilgrims, movedBuses: result.movedBuses, movedTo: result.movedTo });
 }

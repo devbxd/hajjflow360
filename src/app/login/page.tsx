@@ -38,6 +38,9 @@ export default function LoginPage() {
     <div className="min-h-screen flex items-center justify-center bg-background px-4">
       <div className="w-full max-w-sm">
         <div className="flex flex-col items-center mb-6">
+          <div className="w-14 h-14 rounded-xl bg-primary flex items-center justify-center mb-3">
+            <span className="text-2xl font-bold text-primary-foreground">M</span>
+          </div>
           <h1 className="text-lg font-semibold text-foreground">ManasikPro</h1>
           <p className="text-sm text-muted-foreground">Sign in to access the dashboard</p>
         </div>

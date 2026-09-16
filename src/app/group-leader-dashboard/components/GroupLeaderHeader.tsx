@@ -50,10 +50,11 @@ export default function GroupLeaderHeader({ groupLeader: gl, allGroupLeaders, pi
       const res = await fetch(`/api/group-leaders/${gl.groupId}`, { method: 'DELETE' });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Failed to remove group leader');
+      const parts = [];
+      if (data.movedPilgrims > 0) parts.push(`${data.movedPilgrims} pilgrims`);
+      if (data.movedBuses > 0) parts.push(`${data.movedBuses} buses`);
       toast.success(
-        data.movedPilgrims > 0
-          ? `${gl.groupId} removed — ${data.movedPilgrims} pilgrims moved to ${data.movedTo}.`
-          : `${gl.groupId} removed.`
+        parts.length > 0 ? `${gl.groupId} removed — ${parts.join(' and ')} moved to ${data.movedTo}.` : `${gl.groupId} removed.`
       );
       setDeleteOpen(false);
       if (otherGroups.length > 0) {
@@ -182,8 +183,7 @@ export default function GroupLeaderHeader({ groupLeader: gl, allGroupLeaders, pi
           <div className="bg-card rounded-xl border border-border shadow-xl p-6 w-full max-w-sm mx-4 slide-up">
             <h2 className="text-base font-semibold text-foreground mb-2">Remove Group Leader</h2>
             <p className="text-sm text-muted-foreground mb-4">
-              Removes {gl.name} ({gl.groupId}).
-              {gl.pilgrimCount > 0 && ` Its ${gl.pilgrimCount} pilgrim${gl.pilgrimCount > 1 ? 's' : ''} will be moved to another group automatically.`}
+              Removes {gl.name} ({gl.groupId}). Any pilgrims or buses still assigned to this group will be moved to another group automatically.
             </p>
             <div className="flex gap-3">
               <button onClick={() => setDeleteOpen(false)} className="btn-secondary flex-1 justify-center">Cancel</button>
