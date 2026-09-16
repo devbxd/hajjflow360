@@ -195,10 +195,10 @@ export default function PilgrimInfoPanels({
             </span>
           </div>
           <div className="progress-bar-track">
-            <div className="progress-bar-fill" style={{ width: `${Math.round((p.paymentPaid / p.paymentTotal) * 100)}%` }} />
+            <div className="progress-bar-fill" style={{ width: `${p.paymentTotal > 0 ? Math.round((p.paymentPaid / p.paymentTotal) * 100) : 0}%` }} />
           </div>
           <p className="text-xs text-muted-foreground mt-1">
-            {Math.round((p.paymentPaid / p.paymentTotal) * 100)}% — {p.paymentStatus}
+            {p.paymentTotal > 0 ? Math.round((p.paymentPaid / p.paymentTotal) * 100) : 0}% — {p.paymentStatus}
           </p>
         </div>
         <div className="overflow-x-auto scrollbar-thin">

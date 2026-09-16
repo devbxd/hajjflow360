@@ -151,7 +151,7 @@ export default function PaymentTable({ pilgrims, search, filterStatus, onVisible
           </thead>
           <tbody>
             {pageData.map((row, i) => {
-              const pct = Math.round((row.paymentPaid / row.paymentTotal) * 100);
+              const pct = row.paymentTotal > 0 ? Math.round((row.paymentPaid / row.paymentTotal) * 100) : 0;
               const isSelected = selected.has(row.id);
               return (
                 <tr

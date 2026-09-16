@@ -341,7 +341,7 @@ export default function PilgrimTable({ initialPilgrims, groupLeaders }: { initia
                 </tr>
               ) : (
                 paginated.map((p) => {
-                  const payPct = Math.round((p.paymentPaid / p.paymentTotal) * 100);
+                  const payPct = p.paymentTotal > 0 ? Math.round((p.paymentPaid / p.paymentTotal) * 100) : 0;
                   const isSelected = selectedIds.has(p.id);
                   return (
                     <tr

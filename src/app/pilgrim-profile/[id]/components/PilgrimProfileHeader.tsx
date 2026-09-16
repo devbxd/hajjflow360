@@ -10,7 +10,7 @@ import { useCurrency } from '@/lib/currency';
 
 export default function PilgrimProfileHeader({ pilgrim: p, groupLeaders }: { pilgrim: Pilgrim; groupLeaders: GroupLeader[] }) {
   const { format } = useCurrency();
-  const paymentPct = Math.round((p.paymentPaid / p.paymentTotal) * 100);
+  const paymentPct = p.paymentTotal > 0 ? Math.round((p.paymentPaid / p.paymentTotal) * 100) : 0;
   const [editing, setEditing] = useState(false);
 
   return (
