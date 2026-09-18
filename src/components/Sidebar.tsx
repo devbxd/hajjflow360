@@ -44,6 +44,7 @@ const navItems: NavItem[] = [
   { label: 'Invoicing & Receipts', href: '/invoicing-receipts', icon: Receipt, group: 'Finance' },
   { label: 'Revenue & Expenses', href: '/revenue-expenses', icon: TrendingUp, group: 'Finance' },
   { label: 'Reports & Export', href: '/reports-export', icon: FileBarChart, group: 'Finance' },
+  { label: 'Payments', href: '/finance-payments', icon: CreditCard, group: 'Finance' },
   { label: 'Settings', href: '/settings', icon: Settings, group: 'System' },
 ];
 

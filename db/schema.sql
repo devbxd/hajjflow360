@@ -127,6 +127,20 @@ CREATE TABLE IF NOT EXISTS expenses (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- One row per invoice sent to a pilgrim. Separate from `payments` (money
+-- actually received) so staff can issue an invoice before it's paid.
+CREATE TABLE IF NOT EXISTS invoices (
+  id SERIAL PRIMARY KEY,
+  invoice_number TEXT NOT NULL,
+  pilgrim_id TEXT NOT NULL REFERENCES pilgrims(id) ON DELETE CASCADE,
+  description TEXT NOT NULL,
+  amount NUMERIC NOT NULL,
+  status TEXT NOT NULL DEFAULT 'unpaid',
+  issue_date DATE NOT NULL,
+  due_date DATE,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+
 ALTER TABLE pilgrims ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'pending';
 
 -- Multi-tenant separation: every business table gets a company_id, existing
@@ -166,6 +180,10 @@ ALTER TABLE expenses ADD COLUMN IF NOT EXISTS company_id TEXT REFERENCES compani
 UPDATE expenses SET company_id = 'CO-001' WHERE company_id IS NULL;
 ALTER TABLE expenses ALTER COLUMN company_id SET NOT NULL;
 
+ALTER TABLE invoices ADD COLUMN IF NOT EXISTS company_id TEXT REFERENCES companies(id);
+UPDATE invoices SET company_id = 'CO-001' WHERE company_id IS NULL;
+ALTER TABLE invoices ALTER COLUMN company_id SET NOT NULL;
+
 CREATE INDEX IF NOT EXISTS idx_pilgrims_group_id ON pilgrims(group_id);
 CREATE INDEX IF NOT EXISTS idx_payments_pilgrim_id ON payments(pilgrim_id);
 CREATE INDEX IF NOT EXISTS idx_activity_log_created_at ON activity_log(created_at DESC);
@@ -178,6 +196,8 @@ CREATE INDEX IF NOT EXISTS idx_flights_company_id ON flights(company_id);
 CREATE INDEX IF NOT EXISTS idx_activity_log_company_id ON activity_log(company_id);
 CREATE INDEX IF NOT EXISTS idx_expenses_company_id ON expenses(company_id);
 CREATE INDEX IF NOT EXISTS idx_staff_users_company_id ON staff_users(company_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_company_id ON invoices(company_id);
+CREATE INDEX IF NOT EXISTS idx_invoices_pilgrim_id ON invoices(pilgrim_id);
 
 -- payment_paid is always summed from real payment rows here, never stored
 -- on the pilgrim itself, so the displayed "paid" amount can't drift from

@@ -282,6 +282,27 @@ export async function getRecentPayments(companyId: string, limit = 20): Promise<
   }));
 }
 
+export interface NewPaymentInput {
+  pilgrimId: string;
+  amount: number;
+  method: string;
+  paidOn: string;
+  reference?: string;
+  status?: 'cleared' | 'pending';
+}
+
+export async function createPayment(input: NewPaymentInput, companyId: string): Promise<number> {
+  const [row] = await query<{ id: number }>(
+    `INSERT INTO payments (pilgrim_id, paid_on, amount, method, reference, status)
+     SELECT $1, $2, $3, $4, $5, $6
+     WHERE EXISTS (SELECT 1 FROM pilgrims WHERE id = $1 AND company_id = $7)
+     RETURNING id`,
+    [input.pilgrimId, input.paidOn, input.amount, input.method, input.reference ?? '', input.status ?? 'cleared', companyId]
+  );
+  if (!row) throw new Error('Pilgrim not found.');
+  return row.id;
+}
+
 export async function getPaymentsForPilgrim(pilgrimId: string, companyId: string): Promise<PaymentRecord[]> {
   const rows = await query<{ id: number; paid_on: string; amount: string; method: string; reference: string; status: string }>(
     `SELECT pay.id, pay.paid_on, pay.amount, pay.method, pay.reference, pay.status
