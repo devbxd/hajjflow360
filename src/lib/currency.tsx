@@ -13,12 +13,16 @@ export const CURRENCIES: { code: CurrencyCode; label: string; symbol: string }[]
 
 // Fixed reference rates (1 SAR = X). Every amount is stored and collected in
 // SAR — this only converts what's shown on screen, never what's saved.
-const RATES: Record<CurrencyCode, number> = {
+export const RATES: Record<CurrencyCode, number> = {
   SAR: 1,
   USD: 0.2666,
   EUR: 0.2466,
   GBP: 0.2094,
 };
+
+export function toSar(amount: number, currency: CurrencyCode): number {
+  return amount / RATES[currency];
+}
 
 const STORAGE_KEY = 'manasikpro_display_currency';
 

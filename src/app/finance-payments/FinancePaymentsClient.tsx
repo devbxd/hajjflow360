@@ -4,7 +4,7 @@ import React, { useState } from 'react';
 import { CreditCard, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { RecentPayment } from '@/lib/data/pilgrims';
-import { useCurrency } from '@/lib/currency';
+import { useCurrency, CURRENCIES, toSar, type CurrencyCode } from '@/lib/currency';
 
 const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Card', 'Cheque', 'Other'];
 
@@ -20,6 +20,7 @@ export default function FinancePaymentsClient({ pilgrims, initialPayments }: Pro
   const [form, setForm] = useState({
     pilgrimId: pilgrims[0]?.id ?? '',
     amount: '',
+    currency: 'SAR' as CurrencyCode,
     method: PAYMENT_METHODS[0],
     paidOn: new Date().toISOString().slice(0, 10),
     reference: '',
@@ -33,10 +34,17 @@ export default function FinancePaymentsClient({ pilgrims, initialPayments }: Pro
     }
     setSaving(true);
     try {
+      const sarAmount = toSar(Number(form.amount), form.currency);
       const res = await fetch('/api/payments', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ ...form, amount: Number(form.amount) }),
+        body: JSON.stringify({
+          pilgrimId: form.pilgrimId,
+          amount: sarAmount,
+          method: form.method,
+          paidOn: form.paidOn,
+          reference: form.reference,
+        }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error ?? 'Failed to record payment');
@@ -46,7 +54,7 @@ export default function FinancePaymentsClient({ pilgrims, initialPayments }: Pro
           id: `TXN-${data.id}`,
           pilgrimId: form.pilgrimId,
           pilgrimName,
-          amount: Number(form.amount),
+          amount: sarAmount,
           type: 'installment',
           date: form.paidOn,
           method: form.method,
@@ -54,7 +62,7 @@ export default function FinancePaymentsClient({ pilgrims, initialPayments }: Pro
         },
         ...prev,
       ]);
-      setForm({ pilgrimId: pilgrims[0]?.id ?? '', amount: '', method: PAYMENT_METHODS[0], paidOn: new Date().toISOString().slice(0, 10), reference: '' });
+      setForm({ pilgrimId: pilgrims[0]?.id ?? '', amount: '', currency: 'SAR', method: PAYMENT_METHODS[0], paidOn: new Date().toISOString().slice(0, 10), reference: '' });
       toast.success('Payment recorded.');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to record payment.');
@@ -93,14 +101,25 @@ export default function FinancePaymentsClient({ pilgrims, initialPayments }: Pro
               </select>
             </div>
             <div>
-              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Amount (SAR)</label>
-              <input
-                type="number"
-                value={form.amount}
-                onChange={(e) => setForm((prev) => ({ ...prev, amount: e.target.value }))}
-                required
-                className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
-              />
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Amount</label>
+              <div className="flex gap-2">
+                <select
+                  value={form.currency}
+                  onChange={(e) => setForm((prev) => ({ ...prev, currency: e.target.value as CurrencyCode }))}
+                  className="text-sm border border-border rounded-lg px-2 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring w-24"
+                >
+                  {CURRENCIES.map((c) => (
+                    <option key={c.code} value={c.code}>{c.symbol} {c.code}</option>
+                  ))}
+                </select>
+                <input
+                  type="number"
+                  value={form.amount}
+                  onChange={(e) => setForm((prev) => ({ ...prev, amount: e.target.value }))}
+                  required
+                  className="flex-1 text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
             </div>
             <div>
               <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Payment method</label>
