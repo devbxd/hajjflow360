@@ -4,7 +4,7 @@ import AppLayout from '@/components/AppLayout';
 import { getCurrentUser } from '@/lib/auth/currentUser';
 import { getPilgrimById, getPaymentsForPilgrim } from '@/lib/data/pilgrims';
 import { getGroupLeaders } from '@/lib/data/groupLeaders';
-import { getHotels } from '@/lib/data/logistics';
+import { getHotels, getBuses, getFlights } from '@/lib/data/logistics';
 import { getActivityForPilgrim } from '@/lib/data/activity';
 import PilgrimProfileHeader from './components/PilgrimProfileHeader';
 import PilgrimInfoPanels from './components/PilgrimInfoPanels';
@@ -21,10 +21,12 @@ export default async function PilgrimProfilePage({ params }: { params: Promise<{
     notFound();
   }
 
-  const [paymentHistory, groupLeaders, hotels, activity] = await Promise.all([
+  const [paymentHistory, groupLeaders, hotels, buses, flights, activity] = await Promise.all([
     getPaymentsForPilgrim(id, session.companyId),
     getGroupLeaders(session.companyId),
     getHotels(session.companyId),
+    getBuses(session.companyId),
+    getFlights(session.companyId),
     getActivityForPilgrim(id, session.companyId),
   ]);
 
@@ -41,6 +43,9 @@ export default async function PilgrimProfilePage({ params }: { params: Promise<{
             paymentHistory={paymentHistory}
             makkahHotel={makkahHotel ? { checkIn: makkahHotel.checkIn, checkOut: makkahHotel.checkOut } : null}
             madinahHotel={madinahHotel ? { checkIn: madinahHotel.checkIn, checkOut: madinahHotel.checkOut } : null}
+            hotels={hotels}
+            buses={buses}
+            flights={flights}
           />
         </div>
         <div className="xl:col-span-1 space-y-6">

@@ -2,10 +2,13 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
+import { useRouter } from 'next/navigation';
+import { toast } from 'sonner';
 import type { Pilgrim } from '@/lib/mockData';
 import type { PaymentRecord } from '@/lib/data/pilgrims';
+import type { HotelRow, BusRow, FlightRow } from '@/lib/data/logistics';
 import type { StatusType } from '@/components/ui/StatusBadge';
-import { ChevronDown, ChevronUp, User, FileText, Globe, MapPin, CreditCard } from 'lucide-react';
+import { ChevronDown, ChevronUp, User, FileText, Globe, MapPin, CreditCard, Loader2, Pencil } from 'lucide-react';
 import StatusBadge from '@/components/ui/StatusBadge';
 import Icon from '@/components/ui/AppIcon';
 import { useCurrency } from '@/lib/currency';
@@ -55,18 +58,121 @@ interface HotelDates {
   checkOut: string;
 }
 
+function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
+  return (
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-foreground/20 backdrop-blur-sm fade-in">
+      <div className="bg-card rounded-xl border border-border shadow-xl p-6 w-full max-w-sm mx-4 slide-up">
+        <h2 className="text-base font-semibold text-foreground mb-4">{title}</h2>
+        {children}
+        <button type="button" onClick={onClose} className="sr-only">Close</button>
+      </div>
+    </div>
+  );
+}
+
 export default function PilgrimInfoPanels({
   pilgrim: p,
   paymentHistory,
   makkahHotel,
   madinahHotel,
+  hotels,
+  buses,
+  flights,
 }: {
   pilgrim: Pilgrim;
   paymentHistory: PaymentRecord[];
   makkahHotel: HotelDates | null;
   madinahHotel: HotelDates | null;
+  hotels: HotelRow[];
+  buses: BusRow[];
+  flights: FlightRow[];
 }) {
   const { format } = useCurrency();
+  const router = useRouter();
+  const [modal, setModal] = useState<'flight' | 'bus' | 'hotel' | null>(null);
+  const [saving, setSaving] = useState(false);
+
+  const [flightForm, setFlightForm] = useState({ flightNumber: flights[0]?.flightNumber ?? '' });
+  const [busForm, setBusForm] = useState({ busNumber: buses[0]?.number ?? 0, seatNumber: p.seatNumber ?? '' });
+  const [hotelForm, setHotelForm] = useState({
+    city: 'Makkah' as 'Makkah' | 'Madinah',
+    hotelName: hotels.find((h) => h.city === 'Makkah')?.name ?? '',
+    roomNumber: p.roomNumber ?? '',
+    roomType: (p.roomType ?? 'double') as 'single' | 'double' | 'triple' | 'quad',
+  });
+
+  const closeModal = () => setModal(null);
+
+  const handleAssignFlight = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!flightForm.flightNumber) return;
+    setSaving(true);
+    try {
+      const flight = flights.find((f) => f.flightNumber === flightForm.flightNumber);
+      const res = await fetch('/api/allocation/assign-flight', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pilgrimIds: [p.id], flightNumber: flightForm.flightNumber, flightDate: flight?.date }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Flight assigned.');
+      closeModal();
+      router.refresh();
+    } catch {
+      toast.error('Failed to assign flight.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAssignBus = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!busForm.busNumber || !busForm.seatNumber) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/allocation/assign-seat', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ pilgrimId: p.id, busNumber: busForm.busNumber, seatNumber: busForm.seatNumber }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Bus seat assigned.');
+      closeModal();
+      router.refresh();
+    } catch {
+      toast.error('Failed to assign bus seat.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleAssignHotel = async (e: React.FormEvent) => {
+    e.preventDefault();
+    if (!hotelForm.hotelName || !hotelForm.roomNumber) return;
+    setSaving(true);
+    try {
+      const res = await fetch('/api/allocation/assign-room', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          pilgrimId: p.id,
+          city: hotelForm.city,
+          hotelName: hotelForm.hotelName,
+          roomNumber: hotelForm.roomNumber,
+          roomType: hotelForm.roomType,
+        }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success('Hotel room assigned.');
+      closeModal();
+      router.refresh();
+    } catch {
+      toast.error('Failed to assign hotel room.');
+    } finally {
+      setSaving(false);
+    }
+  };
+
   const flightBadge: StatusType = p.flightStatus === 'confirmed' ? 'approved' : p.flightStatus === 'pending' ? 'pending' : 'unallocated';
   const busBadge: StatusType = p.busNumber ? 'allocated' : 'unallocated';
   const hotelBadge: StatusType = p.hotelMakkah ? 'allocated' : 'unallocated';
@@ -158,19 +264,34 @@ export default function PilgrimInfoPanels({
       <Panel title="Logistics Assignment" icon={MapPin}>
         <div className="grid grid-cols-1 sm:grid-cols-3 gap-4">
           <div className="p-3 rounded-lg bg-secondary border border-primary/10">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-2">Flight</p>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-2">Flight</p>
+              <button onClick={() => setModal('flight')} className="p-1 -mt-1 -mr-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary" title="Assign flight">
+                <Pencil size={12} />
+              </button>
+            </div>
             <p className="text-sm font-semibold text-foreground">{p.flightNumber ?? 'Not assigned'}</p>
             <p className="text-xs text-muted-foreground mt-1">{p.flightDate ?? '—'}</p>
             <StatusBadge status={flightBadge} size="sm" />
           </div>
           <div className="p-3 rounded-lg bg-secondary border border-primary/10">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-2">Bus & Seat</p>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-2">Bus & Seat</p>
+              <button onClick={() => setModal('bus')} className="p-1 -mt-1 -mr-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary" title="Assign bus & seat">
+                <Pencil size={12} />
+              </button>
+            </div>
             <p className="text-sm font-semibold text-foreground">{p.busNumber ? `Bus #${p.busNumber}` : 'Not assigned'}</p>
             <p className="text-xs text-muted-foreground mt-1">{p.seatNumber ? `Seat ${p.seatNumber}` : '—'}</p>
             <StatusBadge status={busBadge} size="sm" />
           </div>
           <div className="p-3 rounded-lg bg-secondary border border-primary/10">
-            <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-2">Hotel & Room</p>
+            <div className="flex items-start justify-between gap-2">
+              <p className="text-xs text-muted-foreground uppercase tracking-wide font-medium mb-2">Hotel & Room</p>
+              <button onClick={() => setModal('hotel')} className="p-1 -mt-1 -mr-1 rounded hover:bg-primary/10 text-muted-foreground hover:text-primary" title="Assign hotel & room">
+                <Pencil size={12} />
+              </button>
+            </div>
             <p className="text-sm font-semibold text-foreground truncate">{p.hotelMakkah ?? 'Not assigned'}</p>
             <p className="text-xs text-muted-foreground mt-1">{p.roomNumber ? `Room ${p.roomNumber} · ${p.roomType}` : '—'}</p>
             <StatusBadge status={hotelBadge} size="sm" />
@@ -233,6 +354,143 @@ export default function PilgrimInfoPanels({
           </table>
         </div>
       </Panel>
+
+      {modal === 'flight' && (
+        <Modal title="Assign Flight" onClose={closeModal}>
+          <form onSubmit={handleAssignFlight} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Flight</label>
+              {flights.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No flights created yet. Add one in Allocation Management first.</p>
+              ) : (
+                <select
+                  value={flightForm.flightNumber}
+                  onChange={(e) => setFlightForm({ flightNumber: e.target.value })}
+                  className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  {flights.map((f) => (
+                    <option key={f.id} value={f.flightNumber}>{f.flightNumber} — {f.origin} → {f.destination} · {f.date}</option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={closeModal} className="btn-secondary flex-1 justify-center">Cancel</button>
+              <button type="submit" disabled={saving || flights.length === 0} className="btn-primary flex-1 justify-center" style={{ opacity: saving ? 0.7 : 1 }}>
+                {saving ? <Loader2 size={14} className="animate-spin" /> : 'Assign'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {modal === 'bus' && (
+        <Modal title="Assign Bus & Seat" onClose={closeModal}>
+          <form onSubmit={handleAssignBus} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Bus</label>
+              {buses.length === 0 ? (
+                <p className="text-sm text-muted-foreground">No buses created yet. Add one in Allocation Management first.</p>
+              ) : (
+                <select
+                  value={busForm.busNumber}
+                  onChange={(e) => setBusForm((prev) => ({ ...prev, busNumber: Number(e.target.value) }))}
+                  className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  {buses.map((b) => (
+                    <option key={b.id} value={b.number}>Bus #{b.number} — {b.route} ({b.allocated}/{b.capacity})</option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Seat number</label>
+              <input
+                type="text"
+                value={busForm.seatNumber}
+                onChange={(e) => setBusForm((prev) => ({ ...prev, seatNumber: e.target.value }))}
+                placeholder="e.g. A3"
+                required
+                className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              />
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={closeModal} className="btn-secondary flex-1 justify-center">Cancel</button>
+              <button type="submit" disabled={saving || buses.length === 0} className="btn-primary flex-1 justify-center" style={{ opacity: saving ? 0.7 : 1 }}>
+                {saving ? <Loader2 size={14} className="animate-spin" /> : 'Assign'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
+
+      {modal === 'hotel' && (
+        <Modal title="Assign Hotel & Room" onClose={closeModal}>
+          <form onSubmit={handleAssignHotel} className="space-y-4">
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">City</label>
+              <select
+                value={hotelForm.city}
+                onChange={(e) => {
+                  const city = e.target.value as 'Makkah' | 'Madinah';
+                  setHotelForm((prev) => ({ ...prev, city, hotelName: hotels.find((h) => h.city === city)?.name ?? '' }));
+                }}
+                className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+              >
+                <option value="Makkah">Makkah</option>
+                <option value="Madinah">Madinah</option>
+              </select>
+            </div>
+            <div>
+              <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Hotel</label>
+              {hotels.filter((h) => h.city === hotelForm.city).length === 0 ? (
+                <p className="text-sm text-muted-foreground">No hotels for this city yet. Add one in Allocation Management first.</p>
+              ) : (
+                <select
+                  value={hotelForm.hotelName}
+                  onChange={(e) => setHotelForm((prev) => ({ ...prev, hotelName: e.target.value }))}
+                  className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  {hotels.filter((h) => h.city === hotelForm.city).map((h) => (
+                    <option key={h.id} value={h.name}>{h.name} ({h.allocatedRooms}/{h.totalRooms} rooms)</option>
+                  ))}
+                </select>
+              )}
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Room number</label>
+                <input
+                  type="text"
+                  value={hotelForm.roomNumber}
+                  onChange={(e) => setHotelForm((prev) => ({ ...prev, roomNumber: e.target.value }))}
+                  required
+                  className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                />
+              </div>
+              <div>
+                <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Room type</label>
+                <select
+                  value={hotelForm.roomType}
+                  onChange={(e) => setHotelForm((prev) => ({ ...prev, roomType: e.target.value as typeof prev.roomType }))}
+                  className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+                >
+                  <option value="single">Single</option>
+                  <option value="double">Double</option>
+                  <option value="triple">Triple</option>
+                  <option value="quad">Quad</option>
+                </select>
+              </div>
+            </div>
+            <div className="flex gap-3 pt-2">
+              <button type="button" onClick={closeModal} className="btn-secondary flex-1 justify-center">Cancel</button>
+              <button type="submit" disabled={saving || hotels.filter((h) => h.city === hotelForm.city).length === 0} className="btn-primary flex-1 justify-center" style={{ opacity: saving ? 0.7 : 1 }}>
+                {saving ? <Loader2 size={14} className="animate-spin" /> : 'Assign'}
+              </button>
+            </div>
+          </form>
+        </Modal>
+      )}
     </div>
   );
 }
