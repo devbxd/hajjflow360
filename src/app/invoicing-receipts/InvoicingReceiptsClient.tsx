@@ -1,86 +1,13 @@
 'use client';
 
 import React, { useMemo, useState } from 'react';
-import { Receipt, Search, Printer, FileText, PlusCircle, Loader2, Trash2 } from 'lucide-react';
+import { Receipt, Search, Download, PlusCircle, Loader2, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { RecentPayment } from '@/lib/data/pilgrims';
 import type { Invoice } from '@/lib/data/invoices';
 import { useCurrency } from '@/lib/currency';
+import { downloadInvoicePdf, downloadReceiptPdf } from '@/lib/pdf';
 import StatusBadge, { type StatusType } from '@/components/ui/StatusBadge';
-
-function openReceipt(payment: RecentPayment) {
-  const html = `<!doctype html>
-<html>
-<head>
-<title>Receipt ${payment.id}</title>
-<style>
-  body { font-family: -apple-system, Segoe UI, Arial, sans-serif; color: #1F1B16; max-width: 480px; margin: 40px auto; padding: 0 20px; }
-  h1 { font-size: 18px; margin-bottom: 4px; }
-  .muted { color: #6B6560; font-size: 13px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 24px; }
-  td { padding: 8px 0; font-size: 14px; border-bottom: 1px solid #E5E1DA; }
-  td:last-child { text-align: right; font-weight: 600; }
-  .total { font-size: 18px; font-weight: 700; color: #1B6B4A; }
-</style>
-</head>
-<body>
-  <h1>ManasikPro — Payment Receipt</h1>
-  <p class="muted">Hajj 2027 Campaign</p>
-  <table>
-    <tr><td>Receipt #</td><td>${payment.id}</td></tr>
-    <tr><td>Pilgrim</td><td>${payment.pilgrimName} (${payment.pilgrimId})</td></tr>
-    <tr><td>Date</td><td>${payment.date}</td></tr>
-    <tr><td>Method</td><td>${payment.method}</td></tr>
-    <tr><td>Reference</td><td>${payment.reference}</td></tr>
-    <tr><td>Type</td><td>${payment.type === 'full' ? 'Full payment' : 'Installment'}</td></tr>
-    <tr><td>Amount</td><td class="total">SAR ${payment.amount.toLocaleString()}</td></tr>
-  </table>
-</body>
-</html>`;
-  const win = window.open('', '_blank', 'width=560,height=700');
-  if (!win) return;
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  win.print();
-}
-
-function openInvoice(invoice: Invoice) {
-  const html = `<!doctype html>
-<html>
-<head>
-<title>${invoice.invoiceNumber}</title>
-<style>
-  body { font-family: -apple-system, Segoe UI, Arial, sans-serif; color: #1F1B16; max-width: 480px; margin: 40px auto; padding: 0 20px; }
-  h1 { font-size: 18px; margin-bottom: 4px; }
-  .muted { color: #6B6560; font-size: 13px; }
-  table { width: 100%; border-collapse: collapse; margin-top: 24px; }
-  td { padding: 8px 0; font-size: 14px; border-bottom: 1px solid #E5E1DA; }
-  td:last-child { text-align: right; font-weight: 600; }
-  .total { font-size: 18px; font-weight: 700; color: #1B6B4A; }
-</style>
-</head>
-<body>
-  <h1>ManasikPro — Invoice</h1>
-  <p class="muted">Hajj 2027 Campaign</p>
-  <table>
-    <tr><td>Invoice #</td><td>${invoice.invoiceNumber}</td></tr>
-    <tr><td>Pilgrim</td><td>${invoice.pilgrimName} (${invoice.pilgrimId})</td></tr>
-    <tr><td>Description</td><td>${invoice.description}</td></tr>
-    <tr><td>Issue date</td><td>${invoice.issueDate}</td></tr>
-    <tr><td>Due date</td><td>${invoice.dueDate ?? '—'}</td></tr>
-    <tr><td>Status</td><td>${invoice.status}</td></tr>
-    <tr><td>Amount</td><td class="total">SAR ${invoice.amount.toLocaleString()}</td></tr>
-  </table>
-</body>
-</html>`;
-  const win = window.open('', '_blank', 'width=560,height=700');
-  if (!win) return;
-  win.document.write(html);
-  win.document.close();
-  win.focus();
-  win.print();
-}
 
 const invoiceStatusMap: Record<Invoice['status'], StatusType> = {
   unpaid: 'pending',
@@ -142,6 +69,7 @@ export default function InvoicingReceiptsClient({ payments, initialInvoices, pil
           pilgrimName,
           description: form.description,
           amount: Number(form.amount),
+          paidAmount: 0,
           status: 'unpaid',
           issueDate: form.issueDate,
           dueDate: form.dueDate || null,
@@ -194,7 +122,7 @@ export default function InvoicingReceiptsClient({ payments, initialInvoices, pil
           </div>
           <div>
             <h1 className="text-2xl font-semibold text-foreground">Invoicing &amp; Receipts</h1>
-            <p className="text-sm text-muted-foreground mt-1">Create invoices and print payment receipts</p>
+            <p className="text-sm text-muted-foreground mt-1">Create invoices and download PDF receipts</p>
           </div>
         </div>
         <button onClick={() => setShowForm(true)} className="btn-primary text-sm flex items-center gap-1.5">
@@ -206,10 +134,10 @@ export default function InvoicingReceiptsClient({ payments, initialInvoices, pil
       <div className="card-base mb-6">
         <h3 className="text-sm font-semibold text-foreground mb-4">Invoices</h3>
         <div className="overflow-x-auto scrollbar-thin">
-          <table className="w-full text-sm min-w-[800px]">
+          <table className="w-full text-sm min-w-[850px]">
             <thead>
               <tr className="border-b border-border bg-muted/30">
-                {['Invoice #', 'Pilgrim', 'Description', 'Due', 'Amount', 'Status', ''].map((h) => (
+                {['Invoice #', 'Pilgrim', 'Description', 'Due', 'Amount', 'Paid', 'Status', ''].map((h) => (
                   <th key={h} className="text-left py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase tracking-wide whitespace-nowrap">{h}</th>
                 ))}
               </tr>
@@ -217,7 +145,7 @@ export default function InvoicingReceiptsClient({ payments, initialInvoices, pil
             <tbody>
               {invoices.length === 0 ? (
                 <tr>
-                  <td colSpan={7} className="py-12 text-center text-sm text-muted-foreground">No invoices yet — create one to bill a pilgrim.</td>
+                  <td colSpan={8} className="py-12 text-center text-sm text-muted-foreground">No invoices yet — create one to bill a pilgrim.</td>
                 </tr>
               ) : (
                 invoices.map((inv) => (
@@ -230,6 +158,9 @@ export default function InvoicingReceiptsClient({ payments, initialInvoices, pil
                     <td className="py-2.5 px-3 text-xs text-muted-foreground">{inv.description}</td>
                     <td className="py-2.5 px-3 text-xs text-muted-foreground whitespace-nowrap">{inv.dueDate ?? '—'}</td>
                     <td className="py-2.5 px-3 font-mono-data text-sm font-semibold text-foreground">{format(inv.amount)}</td>
+                    <td className="py-2.5 px-3 font-mono-data text-xs text-muted-foreground">
+                      {format(inv.paidAmount)}{inv.paidAmount > 0 && inv.paidAmount < inv.amount ? ' (partial)' : ''}
+                    </td>
                     <td className="py-2.5 px-3">
                       <select
                         value={inv.status}
@@ -246,8 +177,8 @@ export default function InvoicingReceiptsClient({ payments, initialInvoices, pil
                     </td>
                     <td className="py-2.5 px-3">
                       <div className="flex items-center gap-1">
-                        <button onClick={() => openInvoice(inv)} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary" title="Print invoice">
-                          <FileText size={14} />
+                        <button onClick={() => downloadInvoicePdf(inv)} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary" title="Download PDF">
+                          <Download size={14} />
                         </button>
                         <button onClick={() => handleDeleteInvoice(inv.id)} className="p-1.5 rounded hover:bg-[#FEF2F2] text-muted-foreground hover:text-[#DC2626]" title="Remove invoice">
                           <Trash2 size={13} />
@@ -260,6 +191,9 @@ export default function InvoicingReceiptsClient({ payments, initialInvoices, pil
             </tbody>
           </table>
         </div>
+        <p className="text-xs text-muted-foreground mt-3">
+          &quot;Paid&quot; is set automatically once a linked payment covers the full amount — record it from the Payments page and link it to the invoice.
+        </p>
       </div>
 
       <div className="mb-4 flex items-center justify-between">
@@ -306,10 +240,12 @@ export default function InvoicingReceiptsClient({ payments, initialInvoices, pil
                     <td className="py-2.5 px-3 text-xs text-muted-foreground capitalize">{p.method}</td>
                     <td className="py-2.5 px-3 font-mono-data text-xs text-muted-foreground">{p.reference}</td>
                     <td className="py-2.5 px-3 text-xs text-muted-foreground capitalize">{p.type}</td>
-                    <td className="py-2.5 px-3 font-mono-data text-sm font-semibold text-foreground">{format(p.amount)}</td>
+                    <td className={`py-2.5 px-3 font-mono-data text-sm font-semibold ${p.amount < 0 ? 'text-[#DC2626]' : 'text-foreground'}`}>
+                      {p.amount < 0 ? `(${format(Math.abs(p.amount))})` : format(p.amount)}
+                    </td>
                     <td className="py-2.5 px-3">
-                      <button onClick={() => openReceipt(p)} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary" title="Print receipt">
-                        <Printer size={14} />
+                      <button onClick={() => downloadReceiptPdf(p)} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary" title="Download PDF">
+                        <Download size={14} />
                       </button>
                     </td>
                   </tr>

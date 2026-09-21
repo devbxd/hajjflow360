@@ -7,6 +7,7 @@ export interface Invoice {
   pilgrimName: string;
   description: string;
   amount: number;
+  paidAmount: number;
   status: 'unpaid' | 'paid' | 'cancelled';
   issueDate: string;
   dueDate: string | null;
@@ -22,12 +23,15 @@ function formatDate(value: unknown): string | null {
 export async function getInvoices(companyId: string): Promise<Invoice[]> {
   const rows = await query<{
     id: number; invoice_number: string; pilgrim_id: string; name: string; description: string;
-    amount: string; status: Invoice['status']; issue_date: string; due_date: string | null; created_at: string;
+    amount: string; paid_amount: string; status: Invoice['status']; issue_date: string; due_date: string | null; created_at: string;
   }>(
-    `SELECT inv.id, inv.invoice_number, inv.pilgrim_id, p.name, inv.description, inv.amount, inv.status, inv.issue_date, inv.due_date, inv.created_at
+    `SELECT inv.id, inv.invoice_number, inv.pilgrim_id, p.name, inv.description, inv.amount, inv.status, inv.issue_date, inv.due_date, inv.created_at,
+       COALESCE(SUM(pay.amount) FILTER (WHERE pay.status = 'cleared'), 0) AS paid_amount
      FROM invoices inv
      JOIN pilgrims p ON p.id = inv.pilgrim_id
+     LEFT JOIN payments pay ON pay.invoice_id = inv.id
      WHERE inv.company_id = $1
+     GROUP BY inv.id, p.name
      ORDER BY inv.issue_date DESC, inv.id DESC`,
     [companyId]
   );
@@ -38,6 +42,7 @@ export async function getInvoices(companyId: string): Promise<Invoice[]> {
     pilgrimName: r.name,
     description: r.description,
     amount: Number(r.amount),
+    paidAmount: Number(r.paid_amount),
     status: r.status,
     issueDate: formatDate(r.issue_date)!,
     dueDate: formatDate(r.due_date),
@@ -74,4 +79,24 @@ export async function updateInvoiceStatus(id: number, status: Invoice['status'],
 
 export async function deleteInvoice(id: number, companyId: string): Promise<void> {
   await query('DELETE FROM invoices WHERE id = $1 AND company_id = $2', [id, companyId]);
+}
+
+// Re-derives an invoice's status from its actually linked, cleared payments
+// instead of trusting a manually-set flag, so "paid" always means a real
+// payment record backs it. Never overrides a manual "cancelled".
+export async function recalculateInvoiceStatus(invoiceId: number, companyId: string): Promise<void> {
+  const rows = await query<{ amount: string; status: Invoice['status']; paid: string }>(
+    `SELECT inv.amount, inv.status, COALESCE(SUM(pay.amount) FILTER (WHERE pay.status = 'cleared'), 0) AS paid
+     FROM invoices inv
+     LEFT JOIN payments pay ON pay.invoice_id = inv.id
+     WHERE inv.id = $1 AND inv.company_id = $2
+     GROUP BY inv.id`,
+    [invoiceId, companyId]
+  );
+  const row = rows[0];
+  if (!row || row.status === 'cancelled') return;
+  const nextStatus: Invoice['status'] = Number(row.paid) >= Number(row.amount) ? 'paid' : 'unpaid';
+  if (nextStatus !== row.status) {
+    await query('UPDATE invoices SET status = $2 WHERE id = $1', [invoiceId, nextStatus]);
+  }
 }

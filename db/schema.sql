@@ -65,9 +65,10 @@ CREATE TABLE IF NOT EXISTS pilgrims (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
--- One row per payment received. payment_paid / payment_status on a pilgrim
--- are derived from this table at query time instead of being stored
--- redundantly (avoids the two ever drifting apart).
+-- One row per payment received (or refunded, as a negative amount).
+-- payment_paid / payment_status on a pilgrim are derived from this table at
+-- query time instead of being stored redundantly (avoids the two ever
+-- drifting apart).
 CREATE TABLE IF NOT EXISTS payments (
   id SERIAL PRIMARY KEY,
   pilgrim_id TEXT NOT NULL REFERENCES pilgrims(id) ON DELETE CASCADE,
@@ -141,6 +142,10 @@ CREATE TABLE IF NOT EXISTS invoices (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- Links a payment to the invoice it settles, so an invoice's paid status can
+-- be verified against a real payment instead of a manual flag.
+ALTER TABLE payments ADD COLUMN IF NOT EXISTS invoice_id INT REFERENCES invoices(id) ON DELETE SET NULL;
+
 ALTER TABLE pilgrims ADD COLUMN IF NOT EXISTS payment_status TEXT NOT NULL DEFAULT 'pending';
 
 -- Multi-tenant separation: every business table gets a company_id, existing
@@ -198,6 +203,7 @@ CREATE INDEX IF NOT EXISTS idx_expenses_company_id ON expenses(company_id);
 CREATE INDEX IF NOT EXISTS idx_staff_users_company_id ON staff_users(company_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_company_id ON invoices(company_id);
 CREATE INDEX IF NOT EXISTS idx_invoices_pilgrim_id ON invoices(pilgrim_id);
+CREATE INDEX IF NOT EXISTS idx_payments_invoice_id ON payments(invoice_id);
 
 -- payment_paid is always summed from real payment rows here, never stored
 -- on the pilgrim itself, so the displayed "paid" amount can't drift from

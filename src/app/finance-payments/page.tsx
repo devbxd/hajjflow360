@@ -4,6 +4,7 @@ import AppLayout from '@/components/AppLayout';
 import { getCurrentUser } from '@/lib/auth/currentUser';
 import FinancePaymentsClient from './FinancePaymentsClient';
 import { getAllPilgrims, getRecentPayments } from '@/lib/data/pilgrims';
+import { getInvoices } from '@/lib/data/invoices';
 
 export const dynamic = 'force-dynamic';
 
@@ -11,9 +12,10 @@ export default async function FinancePaymentsPage() {
   const session = await getCurrentUser();
   if (!session) redirect('/login');
 
-  const [pilgrims, payments] = await Promise.all([
+  const [pilgrims, payments, invoices] = await Promise.all([
     getAllPilgrims(session.companyId),
     getRecentPayments(session.companyId, 200),
+    getInvoices(session.companyId),
   ]);
 
   return (
@@ -27,6 +29,9 @@ export default async function FinancePaymentsPage() {
           paymentStatus: p.paymentStatus,
         }))}
         initialPayments={payments}
+        invoices={invoices
+          .filter((i) => i.status === 'unpaid')
+          .map((i) => ({ id: i.id, invoiceNumber: i.invoiceNumber, pilgrimId: i.pilgrimId, amount: i.amount, paidAmount: i.paidAmount }))}
       />
     </AppLayout>
   );

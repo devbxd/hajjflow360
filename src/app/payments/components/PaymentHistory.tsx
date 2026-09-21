@@ -8,6 +8,7 @@ import { useCurrency } from '@/lib/currency';
 const typeConfig = {
   full: { label: 'Full', color: 'text-[#16A34A] bg-[#F0FDF4]' },
   installment: { label: 'Installment', color: 'text-[#2563EB] bg-[#EFF6FF]' },
+  refund: { label: 'Refund', color: 'text-[#DC2626] bg-[#FEF2F2]' },
 };
 
 export default function PaymentHistory({ transactions }: { transactions: RecentPayment[] }) {

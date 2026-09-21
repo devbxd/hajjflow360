@@ -244,6 +244,8 @@ export interface PaymentRecord {
   method: string;
   reference: string;
   status: string;
+  invoiceId: number | null;
+  invoiceNumber: string | null;
 }
 
 export interface RecentPayment {
@@ -251,20 +253,22 @@ export interface RecentPayment {
   pilgrimId: string;
   pilgrimName: string;
   amount: number;
-  type: 'full' | 'installment';
+  type: 'full' | 'installment' | 'refund';
   date: string;
   method: string;
   reference: string;
+  invoiceNumber: string | null;
 }
 
 export async function getRecentPayments(companyId: string, limit = 20): Promise<RecentPayment[]> {
   const rows = await query<{
     id: number; pilgrim_id: string; name: string; amount: string; payment_total: string;
-    paid_on: string; method: string; reference: string;
+    paid_on: string; method: string; reference: string; invoice_number: string | null;
   }>(
-    `SELECT pay.id, pay.pilgrim_id, p.name, pay.amount, p.payment_total, pay.paid_on, pay.method, pay.reference
+    `SELECT pay.id, pay.pilgrim_id, p.name, pay.amount, p.payment_total, pay.paid_on, pay.method, pay.reference, inv.invoice_number
      FROM payments pay
      JOIN pilgrims p ON p.id = pay.pilgrim_id
+     LEFT JOIN invoices inv ON inv.id = pay.invoice_id
      WHERE pay.status = 'cleared' AND p.company_id = $2
      ORDER BY pay.paid_on DESC, pay.id DESC
      LIMIT $1`,
@@ -275,10 +279,11 @@ export async function getRecentPayments(companyId: string, limit = 20): Promise<
     pilgrimId: r.pilgrim_id,
     pilgrimName: r.name,
     amount: Number(r.amount),
-    type: Number(r.amount) >= Number(r.payment_total) ? 'full' : 'installment',
+    type: Number(r.amount) < 0 ? 'refund' : Number(r.amount) >= Number(r.payment_total) ? 'full' : 'installment',
     date: formatDate(r.paid_on),
     method: r.method,
     reference: r.reference,
+    invoiceNumber: r.invoice_number,
   }));
 }
 
@@ -289,25 +294,27 @@ export interface NewPaymentInput {
   paidOn: string;
   reference?: string;
   status?: 'cleared' | 'pending';
+  invoiceId?: number;
 }
 
 export async function createPayment(input: NewPaymentInput, companyId: string): Promise<number> {
   const [row] = await query<{ id: number }>(
-    `INSERT INTO payments (pilgrim_id, paid_on, amount, method, reference, status)
-     SELECT $1, $2, $3, $4, $5, $6
-     WHERE EXISTS (SELECT 1 FROM pilgrims WHERE id = $1 AND company_id = $7)
+    `INSERT INTO payments (pilgrim_id, paid_on, amount, method, reference, status, invoice_id)
+     SELECT $1, $2, $3, $4, $5, $6, $7
+     WHERE EXISTS (SELECT 1 FROM pilgrims WHERE id = $1 AND company_id = $8)
      RETURNING id`,
-    [input.pilgrimId, input.paidOn, input.amount, input.method, input.reference ?? '', input.status ?? 'cleared', companyId]
+    [input.pilgrimId, input.paidOn, input.amount, input.method, input.reference ?? '', input.status ?? 'cleared', input.invoiceId ?? null, companyId]
   );
   if (!row) throw new Error('Pilgrim not found.');
   return row.id;
 }
 
 export async function getPaymentsForPilgrim(pilgrimId: string, companyId: string): Promise<PaymentRecord[]> {
-  const rows = await query<{ id: number; paid_on: string; amount: string; method: string; reference: string; status: string }>(
-    `SELECT pay.id, pay.paid_on, pay.amount, pay.method, pay.reference, pay.status
+  const rows = await query<{ id: number; paid_on: string; amount: string; method: string; reference: string; status: string; invoice_id: number | null; invoice_number: string | null }>(
+    `SELECT pay.id, pay.paid_on, pay.amount, pay.method, pay.reference, pay.status, pay.invoice_id, inv.invoice_number
      FROM payments pay
      JOIN pilgrims p ON p.id = pay.pilgrim_id
+     LEFT JOIN invoices inv ON inv.id = pay.invoice_id
      WHERE pay.pilgrim_id = $1 AND p.company_id = $2
      ORDER BY pay.paid_on DESC`,
     [pilgrimId, companyId]
@@ -319,5 +326,7 @@ export async function getPaymentsForPilgrim(pilgrimId: string, companyId: string
     method: r.method,
     reference: r.reference,
     status: r.status,
+    invoiceId: r.invoice_id,
+    invoiceNumber: r.invoice_number,
   }));
 }
