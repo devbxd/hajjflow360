@@ -22,14 +22,14 @@ interface Props {
 }
 
 export default function FinancePaymentsClient({ pilgrims: initialPilgrims, initialPayments }: Props) {
-  const { format } = useCurrency();
+  const { format, currency: displayCurrency } = useCurrency();
   const [pilgrims, setPilgrims] = useState<PilgrimOption[]>(initialPilgrims);
   const [payments, setPayments] = useState<RecentPayment[]>(initialPayments);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
     pilgrimId: initialPilgrims[0]?.id ?? '',
     amount: '',
-    currency: 'SAR' as CurrencyCode,
+    currency: displayCurrency,
     method: PAYMENT_METHODS[0],
     paidOn: new Date().toISOString().slice(0, 10),
     reference: '',

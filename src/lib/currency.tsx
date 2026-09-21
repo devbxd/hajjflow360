@@ -37,14 +37,14 @@ interface CurrencyContextValue {
 const CurrencyContext = createContext<CurrencyContextValue | null>(null);
 
 export function CurrencyProvider({ children }: { children: React.ReactNode }) {
-  const [currency, setCurrencyState] = useState<CurrencyCode>('SAR');
+  const [currency, setCurrencyState] = useState<CurrencyCode>('USD');
 
   useEffect(() => {
     try {
       const stored = localStorage.getItem(STORAGE_KEY);
       if (stored && stored in RATES) setCurrencyState(stored as CurrencyCode);
     } catch {
-      // localStorage unavailable — stay on the SAR default.
+      // localStorage unavailable — stay on the USD default.
     }
   }, []);
 
