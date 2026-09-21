@@ -13,7 +13,7 @@ export interface ParsedPassport {
   passportExpiry?: string; // DD/MM/YYYY
 }
 
-function mrzDateToDMY(mrzDate: string): string | undefined {
+function mrzDobToDMY(mrzDate: string): string | undefined {
   if (!/^\d{6}$/.test(mrzDate)) return undefined;
   const yy = parseInt(mrzDate.slice(0, 2), 10);
   const mm = mrzDate.slice(2, 4);
@@ -21,6 +21,17 @@ function mrzDateToDMY(mrzDate: string): string | undefined {
   // MRZ years are 2-digit; treat 00-30 as 2000s, 31-99 as 1900s (passports
   // rarely span further back for date-of-birth than that in this dataset).
   const year = yy <= 30 ? 2000 + yy : 1900 + yy;
+  return `${dd}/${mm}/${year}`;
+}
+
+function mrzExpiryToDMY(mrzDate: string): string | undefined {
+  if (!/^\d{6}$/.test(mrzDate)) return undefined;
+  const yy = parseInt(mrzDate.slice(0, 2), 10);
+  const mm = mrzDate.slice(2, 4);
+  const dd = mrzDate.slice(4, 6);
+  // Expiry is always in the 2000s — no unexpired passport can carry an
+  // expiry date from the 1900s, unlike date-of-birth which genuinely can.
+  const year = 2000 + yy;
   return `${dd}/${mm}/${year}`;
 }
 
@@ -59,13 +70,13 @@ export function parsePassportMrz(rawText: string): ParsedPassport {
   const passportNumberRaw = line2.slice(0, 9).replace(/</g, '');
   if (passportNumberRaw) result.passportNumber = passportNumberRaw;
 
-  const dob = mrzDateToDMY(line2.slice(13, 19));
+  const dob = mrzDobToDMY(line2.slice(13, 19));
   if (dob) result.dateOfBirth = dob;
 
   const sex = line2[20];
   if (sex === 'M' || sex === 'F') result.gender = sex;
 
-  const expiry = mrzDateToDMY(line2.slice(21, 27));
+  const expiry = mrzExpiryToDMY(line2.slice(21, 27));
   if (expiry) result.passportExpiry = expiry;
 
   return result;
