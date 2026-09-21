@@ -1,30 +1,50 @@
 'use client';
 
-import React, { useState } from 'react';
+import React, { useMemo, useState } from 'react';
 import { CreditCard, Loader2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { RecentPayment } from '@/lib/data/pilgrims';
-import { useCurrency, CURRENCIES, toSar, type CurrencyCode } from '@/lib/currency';
+import { useCurrency, CURRENCIES, RATES, toSar, type CurrencyCode } from '@/lib/currency';
 
 const PAYMENT_METHODS = ['Cash', 'Bank Transfer', 'Card', 'Cheque', 'Other'];
 
+interface PilgrimOption {
+  id: string;
+  name: string;
+  paymentTotal: number;
+  paymentPaid: number;
+  paymentStatus: string;
+}
+
 interface Props {
-  pilgrims: { id: string; name: string }[];
+  pilgrims: PilgrimOption[];
   initialPayments: RecentPayment[];
 }
 
-export default function FinancePaymentsClient({ pilgrims, initialPayments }: Props) {
+export default function FinancePaymentsClient({ pilgrims: initialPilgrims, initialPayments }: Props) {
   const { format } = useCurrency();
+  const [pilgrims, setPilgrims] = useState<PilgrimOption[]>(initialPilgrims);
   const [payments, setPayments] = useState<RecentPayment[]>(initialPayments);
   const [saving, setSaving] = useState(false);
   const [form, setForm] = useState({
-    pilgrimId: pilgrims[0]?.id ?? '',
+    pilgrimId: initialPilgrims[0]?.id ?? '',
     amount: '',
     currency: 'SAR' as CurrencyCode,
     method: PAYMENT_METHODS[0],
     paidOn: new Date().toISOString().slice(0, 10),
     reference: '',
   });
+
+  const selectedPilgrim = useMemo(() => pilgrims.find((p) => p.id === form.pilgrimId), [pilgrims, form.pilgrimId]);
+  const remaining = selectedPilgrim ? Math.max(0, selectedPilgrim.paymentTotal - selectedPilgrim.paymentPaid) : 0;
+  const enteredSar = form.amount ? toSar(Number(form.amount), form.currency) : 0;
+  const remainingAfter = Math.max(0, remaining - enteredSar);
+
+  const handleUseRemaining = () => {
+    if (!selectedPilgrim) return;
+    const amountInCurrency = Math.round(remaining * RATES[form.currency] * 100) / 100;
+    setForm((prev) => ({ ...prev, amount: String(amountInCurrency) }));
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -62,7 +82,8 @@ export default function FinancePaymentsClient({ pilgrims, initialPayments }: Pro
         },
         ...prev,
       ]);
-      setForm({ pilgrimId: pilgrims[0]?.id ?? '', amount: '', currency: 'SAR', method: PAYMENT_METHODS[0], paidOn: new Date().toISOString().slice(0, 10), reference: '' });
+      setPilgrims((prev) => prev.map((p) => (p.id === form.pilgrimId ? { ...p, paymentPaid: p.paymentPaid + sarAmount } : p)));
+      setForm((prev) => ({ ...prev, amount: '', reference: '' }));
       toast.success('Payment recorded.');
     } catch (err) {
       toast.error(err instanceof Error ? err.message : 'Failed to record payment.');
@@ -95,11 +116,39 @@ export default function FinancePaymentsClient({ pilgrims, initialPayments }: Pro
                 required
                 className="w-full text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
               >
-                {pilgrims.map((p) => (
-                  <option key={p.id} value={p.id}>{p.name} ({p.id})</option>
-                ))}
+                {pilgrims.map((p) => {
+                  const due = Math.max(0, p.paymentTotal - p.paymentPaid);
+                  return (
+                    <option key={p.id} value={p.id}>
+                      {p.name} ({p.id}){p.paymentTotal > 0 ? ` — ${due > 0 ? `${format(due)} due` : 'fully paid'}` : ''}
+                    </option>
+                  );
+                })}
               </select>
             </div>
+
+            {selectedPilgrim && selectedPilgrim.paymentTotal > 0 && (
+              <div className="rounded-lg border border-border bg-muted/30 p-3 space-y-1.5">
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Package price</span>
+                  <span className="font-mono-data font-medium text-foreground">{format(selectedPilgrim.paymentTotal)}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs">
+                  <span className="text-muted-foreground">Already paid</span>
+                  <span className="font-mono-data font-medium text-[#16A34A]">{format(selectedPilgrim.paymentPaid)}</span>
+                </div>
+                <div className="flex items-center justify-between text-xs pt-1.5 border-t border-border">
+                  <span className="text-muted-foreground font-medium">Remaining</span>
+                  <span className="font-mono-data font-semibold text-[#DC2626]">{format(remaining)}</span>
+                </div>
+                {remaining > 0 && (
+                  <button type="button" onClick={handleUseRemaining} className="text-xs text-primary hover:underline pt-0.5">
+                    Fill remaining balance
+                  </button>
+                )}
+              </div>
+            )}
+
             <div>
               <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Amount</label>
               <div className="flex gap-2">
@@ -120,6 +169,11 @@ export default function FinancePaymentsClient({ pilgrims, initialPayments }: Pro
                   className="flex-1 text-sm border border-border rounded-lg px-3 py-2 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
                 />
               </div>
+              {selectedPilgrim && selectedPilgrim.paymentTotal > 0 && form.amount && (
+                <p className="text-xs text-muted-foreground mt-1.5">
+                  Remaining after this payment: <span className="font-mono-data font-medium text-foreground">{format(remainingAfter)}</span>
+                </p>
+              )}
             </div>
             <div>
               <label className="block text-xs font-medium text-muted-foreground uppercase tracking-wide mb-1">Payment method</label>

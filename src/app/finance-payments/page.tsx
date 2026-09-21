@@ -18,7 +18,16 @@ export default async function FinancePaymentsPage() {
 
   return (
     <AppLayout>
-      <FinancePaymentsClient pilgrims={pilgrims.map((p) => ({ id: p.id, name: p.name }))} initialPayments={payments} />
+      <FinancePaymentsClient
+        pilgrims={pilgrims.map((p) => ({
+          id: p.id,
+          name: p.name,
+          paymentTotal: p.paymentTotal,
+          paymentPaid: p.paymentPaid,
+          paymentStatus: p.paymentStatus,
+        }))}
+        initialPayments={payments}
+      />
     </AppLayout>
   );
 }
