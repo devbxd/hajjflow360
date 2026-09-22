@@ -3,6 +3,7 @@ import { getCurrentUser } from '@/lib/auth/currentUser';
 import { getAllPilgrims } from '@/lib/data/pilgrims';
 import { computeAtRisk } from '@/lib/data/campaign';
 import { getRecentActivity } from '@/lib/data/activity';
+import { getActiveSeason } from '@/lib/data/seasons';
 
 export async function GET() {
   const session = await getCurrentUser();
@@ -10,9 +11,12 @@ export async function GET() {
     return NextResponse.json({ error: 'Not authenticated.' }, { status: 401 });
   }
 
-  const pilgrims = await getAllPilgrims(session.companyId);
+  const [pilgrims, activity, activeSeason] = await Promise.all([
+    getAllPilgrims(session.companyId),
+    getRecentActivity(session.companyId, 50),
+    getActiveSeason(session.companyId),
+  ]);
   const atRisk = computeAtRisk(pilgrims, 12);
-  const activity = await getRecentActivity(session.companyId, 50);
 
   const paymentDue = pilgrims.filter((p) => p.paymentStatus === 'partial' || p.paymentStatus === 'overdue').length;
   const emergencyCount = atRisk.filter((a) => a.severity === 'critical').length;
@@ -23,5 +27,7 @@ export async function GET() {
     emergency: emergencyCount,
     notifications: activity.length,
     totalPilgrims: pilgrims.length,
+    activeSeasonName: activeSeason.name,
+    activeSeasonStart: activeSeason.startDate,
   });
 }

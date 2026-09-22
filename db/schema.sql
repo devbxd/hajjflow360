@@ -10,6 +10,25 @@ CREATE TABLE IF NOT EXISTS companies (
   created_at TIMESTAMPTZ NOT NULL DEFAULT now()
 );
 
+-- One row per Hajj/Umrah season. Exactly one row per company has
+-- status = 'active' at a time — that's the season all operational tables
+-- currently hold data for. Starting a new season archives a full JSON
+-- snapshot of that data here (so it stays exportable forever) and wipes the
+-- operational tables clean, rather than tagging every row with a season_id.
+CREATE TABLE IF NOT EXISTS seasons (
+  id SERIAL PRIMARY KEY,
+  company_id TEXT NOT NULL REFERENCES companies(id),
+  name TEXT NOT NULL,
+  start_date DATE NOT NULL,
+  status TEXT NOT NULL DEFAULT 'active',
+  snapshot JSONB,
+  stats JSONB,
+  archived_at TIMESTAMPTZ,
+  created_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);
+CREATE INDEX IF NOT EXISTS idx_seasons_company_id ON seasons(company_id);
+CREATE INDEX IF NOT EXISTS idx_seasons_status ON seasons(company_id, status);
+
 CREATE TABLE IF NOT EXISTS staff_users (
   username TEXT PRIMARY KEY,
   display_name TEXT NOT NULL,

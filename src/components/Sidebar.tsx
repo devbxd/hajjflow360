@@ -3,7 +3,7 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, UserCheck, ChevronLeft, ChevronRight, Plane, Building2, Bus, QrCode, Bell, Settings, LogOut, AlertTriangle, Layers, CreditCard, ScanLine, BookOpen, Receipt, TrendingUp, FileBarChart, ClipboardList } from 'lucide-react';
+import { LayoutDashboard, Users, UserCheck, ChevronLeft, ChevronRight, Plane, Building2, Bus, QrCode, Bell, Settings, LogOut, AlertTriangle, Layers, CreditCard, ScanLine, BookOpen, Receipt, TrendingUp, FileBarChart, ClipboardList, CalendarClock } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
 import { useCurrency, CURRENCIES, type CurrencyCode } from '@/lib/currency';
 import { readSidebarCollapsedDefault } from '@/lib/preferences';
@@ -16,6 +16,8 @@ interface NavCounts {
   emergency: number;
   notifications: number;
   totalPilgrims: number;
+  activeSeasonName?: string;
+  activeSeasonStart?: string;
 }
 
 interface NavItem {
@@ -45,10 +47,11 @@ const navItems: NavItem[] = [
   { label: 'Revenue & Expenses', href: '/revenue-expenses', icon: TrendingUp, group: 'Finance' },
   { label: 'Reports & Export', href: '/reports-export', icon: FileBarChart, group: 'Finance' },
   { label: 'Payments', href: '/finance-payments', icon: CreditCard, group: 'Finance' },
+  { label: 'New Season', href: '/new-season', icon: CalendarClock, group: 'Season' },
   { label: 'Settings', href: '/settings', icon: Settings, group: 'System' },
 ];
 
-const groups = ['Overview', 'Pilgrims', 'Logistics', 'Operations', 'Finance', 'System'];
+const groups = ['Overview', 'Pilgrims', 'Logistics', 'Operations', 'Finance', 'Season', 'System'];
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
@@ -120,9 +123,9 @@ export default function Sidebar() {
       {/* Campaign Badge */}
       {!collapsed && (
         <div className="mx-3 mt-3 px-3 py-2 rounded-lg bg-secondary border border-primary/20">
-          <p className="text-xs text-muted-foreground font-medium">Active Campaign</p>
-          <p className="text-sm font-semibold text-primary">Hajj 2027</p>
-          <p className="text-xs text-muted-foreground">{navCounts?.totalPilgrims ?? '...'} pilgrims · Sep–Oct 2027</p>
+          <p className="text-xs text-muted-foreground font-medium">Active Season</p>
+          <p className="text-sm font-semibold text-primary truncate">{navCounts?.activeSeasonName ?? '...'}</p>
+          <p className="text-xs text-muted-foreground">{navCounts?.totalPilgrims ?? '...'} pilgrims · since {navCounts?.activeSeasonStart ?? '—'}</p>
         </div>
       )}
 
