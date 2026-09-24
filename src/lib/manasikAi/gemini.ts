@@ -1,4 +1,4 @@
-// Minimal Google Gemini REST client shared by the Manasik IA routes.
+// Minimal Google Gemini REST client shared by the Manasik AI routes.
 // Uses fetch directly so there is no SDK dependency to keep up to date.
 
 // Tried in order. Free-tier quotas are counted per model, so when one model is

@@ -66,8 +66,8 @@ export function useRecordingId() {
   return useSyncExternalStore(subscribe, () => recordingId, () => null);
 }
 
-const END_TEXT = { ar: 'شكراً لمشاهدتكم', fr: "Merci d'avoir regardé", en: 'Thanks for watching' };
-const TAG_TEXT = { ar: 'عرض مباشر', fr: 'Démo en direct', en: 'Live demo' };
+const END_TEXT = { ar: 'شكراً لمشاهدتكم', en: 'Thanks for watching' };
+const TAG_TEXT = { ar: 'عرض مباشر', en: 'Live demo' };
 
 const STYLE_ID = 'manasik-demo-style';
 const STYLES = `

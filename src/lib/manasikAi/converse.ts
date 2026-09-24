@@ -1,6 +1,6 @@
 import { callGemini, textOf, GEMINI_MODELS, type GeminiContent, type GeminiPart } from './gemini';
 
-// Tool-calling conversation loops for Manasik IA. Groq is the main AI (generous free tier:
+// Tool-calling conversation loops for Manasik AI. Groq is the main AI (generous free tier:
 // ~1,000 requests and 200K tokens a day per model); Gemini is the fallback when every Groq
 // model is out of quota.
 

@@ -27,7 +27,7 @@ const CREATE_VIDEO_DECLARATION = {
         description:
           'The exact voice-over text the narrator reads, in the video language. About 70 words for ~30 s (default), 140 for ~60 s, 210 for ~90 s. Strong hook first, useful content, short call to action to contact the agency. Plain spoken sentences only: no emojis, hashtags, headings, lists, stage directions or speaker names.',
       },
-      language: { type: 'STRING', enum: ['ar', 'fr', 'en'], description: 'Video language. Default to the language the user writes in.' },
+      language: { type: 'STRING', enum: ['ar', 'en'], description: 'Video language. Arabic if the user writes in Arabic, otherwise English.' },
       keywords: {
         type: 'ARRAY',
         items: { type: 'STRING' },
@@ -50,7 +50,7 @@ const CREATE_DEMO_DECLARATION = {
     type: 'OBJECT',
     properties: {
       title: { type: 'STRING', description: 'Short title of the demo, in the video language.' },
-      language: { type: 'STRING', enum: ['ar', 'fr', 'en'], description: 'Narration language. Default to the language the user writes in.' },
+      language: { type: 'STRING', enum: ['ar', 'en'], description: 'Narration language. Arabic if the user writes in Arabic, otherwise English.' },
       voice_gender: { type: 'STRING', enum: ['male', 'female'] },
       scenes: {
         type: 'ARRAY',
@@ -70,7 +70,7 @@ const CREATE_DEMO_DECLARATION = {
 };
 
 function toDemoRequest(args: Record<string, unknown>): DemoRequest | null {
-  const language = args.language === 'fr' || args.language === 'en' ? args.language : 'ar';
+  const language = args.language === 'en' ? 'en' : 'ar';
   const scenes = (Array.isArray(args.scenes) ? args.scenes : [])
     .filter((s): s is { page: string; narration: string } => !!s && typeof s.page === 'string' && !!DEMO_PAGES[s.page] && typeof s.narration === 'string' && s.narration.trim() !== '')
     .slice(0, 8)
@@ -87,14 +87,14 @@ function toDemoRequest(args: Record<string, unknown>): DemoRequest | null {
 
 function systemPrompt() {
   const today = new Date().toISOString().slice(0, 10);
-  return `You are "Manasik IA", the AI assistant built into ManasikPro, the Hajj & Umrah campaign management system used by the agency's staff. Today is ${today}.
+  return `You are "Manasik AI", the AI assistant built into ManasikPro, the Hajj & Umrah campaign management system used by the agency's staff. Today is ${today}.
 
 You do two things:
 1. Answer questions about the agency's pilgrims, groups, visas, passports, flights, hotels, buses, payments, invoices and expenses by calling the data tools. Never guess or invent numbers, names or statuses — if the tools do not have the information, say so. For counts, use the totals the tools return (e.g. totalMatches), not the length of a truncated list. Money is stored in Saudi Riyal (SAR); always state the currency.
 2. Make short videos for social media with create_video. Write the script yourself: warm, respectful, trustworthy, factually accurate about Hajj and Umrah; never invent religious rulings, hadith, prices, dates or promises (only use real figures from the tools if the user wants the video based on the agency's data). Do not ask for confirmation first unless the request is really unclear — just make it, then in one or two sentences tell the user the video is being produced below and that they can edit the script or options in the video card.
 3. When the user wants a video that shows or explains THIS system (a demo, tutorial, walkthrough or presentation of ManasikPro and its features), use create_demo_video instead: pick the relevant pages and write the narration for each. Then tell the user in one or two sentences to press "Record demo" in the card, choose "This tab" when Chrome asks, and not touch the mouse until it finishes.
 
-Always reply in the language the user wrote in (Arabic, French or English). Be concise and practical: lead with the answer, then short bullet points or a small markdown table when listing pilgrims. You can also draft messages (e.g. WhatsApp reminders). You can only read data; if asked to change something, explain where in ManasikPro the staff member can do it.`;
+Reply in Arabic when the user writes in Arabic, otherwise in English. Be concise and practical: lead with the answer, then short bullet points or a small markdown table when listing pilgrims. You can also draft messages (e.g. WhatsApp reminders). You can only read data; if asked to change something, explain where in ManasikPro the staff member can do it.`;
 }
 
 interface ChatMessage {
@@ -105,7 +105,7 @@ interface ChatMessage {
 function toVideoRequest(args: Record<string, unknown>): VideoRequest | null {
   const script = typeof args.script === 'string' ? args.script.trim() : '';
   if (!script) return null;
-  const language = args.language === 'fr' || args.language === 'en' ? args.language : 'ar';
+  const language = args.language === 'en' ? 'en' : 'ar';
   const format = args.format === 'landscape' || args.format === 'square' ? args.format : 'portrait';
   const keywords = Array.isArray(args.keywords)
     ? args.keywords.filter((k): k is string => typeof k === 'string' && k.trim() !== '').map((k) => k.trim()).slice(0, 10)
@@ -123,7 +123,7 @@ function toVideoRequest(args: Record<string, unknown>): VideoRequest | null {
 
 export async function POST(req: NextRequest) {
   if (!MANASIK_AI_ENABLED) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  if (MANASIK_AI_LOCKED) return NextResponse.json({ error: 'Manasik IA needs to be set up with an AI API.' }, { status: 503 });
+  if (MANASIK_AI_LOCKED) return NextResponse.json({ error: 'Manasik AI needs to be set up with an AI API.' }, { status: 503 });
   const session = await getCurrentUser();
   if (!session) return NextResponse.json({ error: 'Please sign in again.' }, { status: 401 });
 

@@ -31,7 +31,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Campaign Dashboard', href: '/', icon: LayoutDashboard, group: 'Overview' },
-  { label: 'Manasik IA', href: '/manasik-ai', icon: Sparkles, group: 'Overview' },
+  { label: 'Manasik AI', href: '/manasik-ai', icon: Sparkles, group: 'Overview' },
   { label: 'Pilgrim Management', href: '/pilgrim-management', icon: Users, badgeKey: 'pilgrimManagement', group: 'Pilgrims' },
   { label: 'Pilgrim Profile', href: '/pilgrim-profile', icon: ClipboardList, group: 'Pilgrims' },
   { label: 'Pilgrim Registry', href: '/pilgrim-registry', icon: BookOpen, group: 'Pilgrims' },

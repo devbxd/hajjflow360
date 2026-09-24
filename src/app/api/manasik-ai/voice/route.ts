@@ -59,7 +59,7 @@ function synthesize(text: string, voice: string, rate: string) {
 
 export async function POST(req: NextRequest) {
   if (!MANASIK_AI_ENABLED) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  if (MANASIK_AI_LOCKED) return NextResponse.json({ error: 'Manasik IA needs to be set up with an AI API.' }, { status: 503 });
+  if (MANASIK_AI_LOCKED) return NextResponse.json({ error: 'Manasik AI needs to be set up with an AI API.' }, { status: 503 });
   const body = await req.json().catch(() => null);
   const text = typeof body?.text === 'string' ? body.text.trim() : '';
   const voice = typeof body?.voice === 'string' ? body.voice : '';

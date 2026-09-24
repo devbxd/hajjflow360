@@ -1,4 +1,4 @@
-// Shared between the Manasik IA page and its API routes, so the server only
+// Shared between the Manasik AI page and its API routes, so the server only
 // accepts the voices and formats the UI actually offers.
 
 export interface VoiceOption {
@@ -7,7 +7,7 @@ export interface VoiceOption {
 }
 
 export interface LanguageOption {
-  code: 'ar' | 'fr' | 'en';
+  code: 'ar' | 'en';
   label: string;
   promptName: string;
   rtl: boolean;
@@ -25,16 +25,6 @@ export const LANGUAGES: LanguageOption[] = [
       { id: 'ar-SA-ZariyahNeural', label: 'Zariyah — Saudi, female' },
       { id: 'ar-LB-RamiNeural', label: 'Rami — Lebanese, male' },
       { id: 'ar-LB-LaylaNeural', label: 'Layla — Lebanese, female' },
-    ],
-  },
-  {
-    code: 'fr',
-    label: 'Français — French',
-    promptName: 'French',
-    rtl: false,
-    voices: [
-      { id: 'fr-FR-HenriNeural', label: 'Henri — male' },
-      { id: 'fr-FR-DeniseNeural', label: 'Denise — female' },
     ],
   },
   {

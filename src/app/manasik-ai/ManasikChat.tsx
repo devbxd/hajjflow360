@@ -29,14 +29,14 @@ const SUGGESTIONS: { icon: React.ElementType; label: string; prompt: string }[] 
   { icon: Users, label: 'Season overview', prompt: 'Give me a quick overview of the current season.' },
   { icon: MessageSquare, label: 'WhatsApp reminder', prompt: 'Draft a polite WhatsApp reminder in Arabic for pilgrims with overdue payments.' },
   { icon: Clapperboard, label: 'Umrah promo video', prompt: 'Make a 30-second vertical video in Arabic inviting people to book their Umrah with us.' },
-  { icon: Clapperboard, label: 'Vidéo en français', prompt: 'Fais une vidéo de 30 secondes en français : 5 conseils pour bien préparer sa Omra.' },
+  { icon: Clapperboard, label: 'Live demo of the system', prompt: 'Make a live demo video of ManasikPro that presents its main features, in English.' },
 ];
 
 let idCounter = 0;
 const newId = () => `m${Date.now()}-${idCounter++}`;
 
 // What the model sees of past turns: video cards are summarised so follow-ups like
-// "make it shorter" or "now in French" have the script to work from.
+// "make it shorter" or "now in Arabic" have the script to work from.
 function historyText(m: Message) {
   const notes = (m.videos ?? []).map((v) => `[Video created — title: "${v.title}", language: ${v.language}, format: ${v.format}. Script: ${v.script}]`);
   for (const id of m.demoIds ?? []) {
@@ -120,7 +120,7 @@ export default function ManasikChat({
           <div className="w-14 h-14 mx-auto rounded-2xl bg-primary flex items-center justify-center">
             <Sparkles size={26} className="text-accent" />
           </div>
-          <h1 className="mt-4 text-xl font-semibold text-foreground">Manasik IA</h1>
+          <h1 className="mt-4 text-xl font-semibold text-foreground">Manasik AI</h1>
           <p className="mt-2 text-sm text-muted-foreground">Needs to be set up with an AI API.</p>
         </div>
       </div>
@@ -136,7 +136,7 @@ export default function ManasikChat({
             <Sparkles size={20} className="text-accent" />
           </div>
           <div>
-            <h1 className="text-xl font-semibold text-foreground">Manasik IA</h1>
+            <h1 className="text-xl font-semibold text-foreground">Manasik AI</h1>
             <p className="text-sm text-muted-foreground">Ask about your campaign, or ask for a video.</p>
           </div>
         </div>
@@ -155,7 +155,7 @@ export default function ManasikChat({
         <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 flex gap-3 text-sm">
           <AlertTriangle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
           <p className="text-foreground">
-            <strong>Setup needed.</strong> Manasik IA is not ready yet — it will be available soon.
+            <strong>Setup needed.</strong> Manasik AI is not ready yet — it will be available soon.
           </p>
         </div>
       )}
@@ -184,7 +184,7 @@ export default function ManasikChat({
             </div>
             <h2 className="mt-4 text-2xl font-semibold text-foreground">Assalamu alaikum 👋</h2>
             <p className="mt-2 text-sm text-muted-foreground max-w-md mx-auto">
-              I know your pilgrims, groups, payments and logistics, and I can make ready-to-post videos with voice-over and captions — in Arabic, French or English.
+              I know your pilgrims, groups, payments and logistics, and I can make ready-to-post videos with voice-over and captions — in Arabic or English.
             </p>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-2 mt-8 text-left">
               {SUGGESTIONS.map((s) => {
@@ -295,7 +295,7 @@ export default function ManasikChat({
             rows={1}
             dir="auto"
             disabled={!geminiReady}
-            placeholder={geminiReady ? 'Ask a question or describe the video you want…' : 'Manasik IA is not ready yet'}
+            placeholder={geminiReady ? 'Ask a question or describe the video you want…' : 'Manasik AI is not ready yet'}
             className="flex-1 resize-none bg-transparent px-2 py-2 text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none"
           />
           <button
@@ -307,7 +307,7 @@ export default function ManasikChat({
             <ArrowUp size={18} />
           </button>
         </div>
-        <p className="text-[11px] text-muted-foreground text-center mt-2">Manasik IA reads your data but never changes it. Check important answers before acting on them.</p>
+        <p className="text-[11px] text-muted-foreground text-center mt-2">Manasik AI reads your data but never changes it. Check important answers before acting on them.</p>
       </form>
     </div>
   );

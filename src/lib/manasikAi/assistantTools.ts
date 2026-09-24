@@ -9,7 +9,7 @@ import { getInvoices } from '@/lib/data/invoices';
 import { getTotalExpenses, getMonthlyExpenses, getExpenses } from '@/lib/data/finance';
 import { getRecentActivity } from '@/lib/data/activity';
 
-// Read-only tools the Manasik IA assistant can call. Every executor is scoped to
+// Read-only tools the Manasik AI assistant can call. Every executor is scoped to
 // the signed-in company, so the model can never see another agency's data, and
 // none of them write anything.
 
