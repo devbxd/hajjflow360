@@ -1,7 +1,7 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, Check, Clapperboard, Download, Film, Loader2, Mic, Music, Plus, RefreshCw, SlidersHorizontal, X } from 'lucide-react';
+import React, { useEffect, useMemo, useRef, useState } from 'react';
+import { AlertTriangle, Check, Clapperboard, Download, Film, Image as ImageIcon, ImagePlus, Loader2, Mic, Music, Plus, RefreshCw, SlidersHorizontal, X } from 'lucide-react';
 import { FORMATS, LANGUAGES, type CaptionWord, type FootageClip, type VideoFormat, type VideoRequest } from '@/lib/manasikAi/options';
 import { pickMimeType, renderVideo } from './renderVideo';
 
@@ -48,8 +48,11 @@ const STEPS: [StepKey, string, React.ElementType][] = [
   ['render', 'Editing', Clapperboard],
 ];
 
+const MAX_PHOTOS = 20;
+
 export default function VideoCard({
   request,
+  photos: initialPhotos,
   brandDefault,
   autoStart,
   pexelsReady,
@@ -57,6 +60,8 @@ export default function VideoCard({
   onBusyChange,
 }: {
   request: VideoRequest;
+  /** The user's own photos, used instead of stock footage. */
+  photos?: File[];
   brandDefault: string;
   autoStart: boolean;
   pexelsReady: boolean;
@@ -74,7 +79,11 @@ export default function VideoCard({
   const [captions, setCaptions] = useState(true);
   const [music, setMusic] = useState<File | null>(null);
   const [musicVolume, setMusicVolume] = useState(0.15);
+  const [photos, setPhotos] = useState<File[]>(initialPhotos ?? []);
   const [showOptions, setShowOptions] = useState(false);
+  const thumbs = useMemo(() => photos.map((f) => URL.createObjectURL(f)), [photos]);
+  useEffect(() => () => thumbs.forEach((u) => URL.revokeObjectURL(u)), [thumbs]);
+  const hasPhotos = photos.length > 0;
 
   const [working, setWorking] = useState(false);
   const [steps, setSteps] = useState<Record<StepKey, StepState>>({ voice: 'pending', footage: 'pending', render: 'pending' });
@@ -92,7 +101,7 @@ export default function VideoCard({
   const language = LANGUAGES.find((l) => l.code === languageCode)!;
   const formatInfo = FORMATS.find((f) => f.id === format)!;
   const supported = typeof window === 'undefined' || pickMimeType() !== null;
-  const canCreate = pexelsReady && supported && !working && !lockedByOther && script.trim() !== '' && keywords.length > 0;
+  const canCreate = (pexelsReady || hasPhotos) && supported && !working && !lockedByOther && script.trim() !== '' && (hasPhotos || keywords.length > 0);
 
   const create = async () => {
     if (!canCreate) return;
@@ -115,11 +124,10 @@ export default function VideoCard({
 
       const words = script.trim().split(/\s+/).length;
       const clipCount = Math.min(12, Math.max(3, Math.ceil(words / 2.4 / 4) + 1));
-      const footage = await postJson<{ clips: FootageClip[] }>(
-        '/api/manasik-ai/footage',
-        { keywords, orientation: format, count: clipCount },
-        controller.signal
-      );
+      // With the user's photos there is nothing to fetch: they are edited straight from this browser.
+      const footage = hasPhotos
+        ? { clips: [] as FootageClip[] }
+        : await postJson<{ clips: FootageClip[] }>('/api/manasik-ai/footage', { keywords, orientation: format, count: clipCount }, controller.signal);
 
       const rendered = await renderVideo({
         canvas: canvasRef.current!,
@@ -128,6 +136,7 @@ export default function VideoCard({
         voice: base64ToArrayBuffer(voiceData.audio),
         words: voiceData.words,
         clipUrls: footage.clips.map((c) => c.url),
+        photos,
         captions,
         rtl: language.rtl,
         brand: brand.trim(),
@@ -247,7 +256,7 @@ export default function VideoCard({
                   >
                     {steps[key] === 'done' ? <Check size={12} /> : steps[key] === 'active' ? <Loader2 size={12} className="animate-spin" /> : <Icon size={12} />}
                   </span>
-                  <span className={steps[key] === 'pending' ? 'text-muted-foreground' : 'text-foreground'}>{label}</span>
+                  <span className={steps[key] === 'pending' ? 'text-muted-foreground' : 'text-foreground'}>{key === 'footage' && hasPhotos ? 'Photos' : label}</span>
                 </div>
               ))}
               <div className="progress-bar-track">
@@ -272,7 +281,14 @@ export default function VideoCard({
               <span>{error}</span>
             </div>
           )}
-          {!pexelsReady && <p className="text-xs text-amber-600">PEXELS_API_KEY is not configured on the server, so videos can&apos;t be created yet.</p>}
+          {!pexelsReady && !hasPhotos && (
+            <p className="text-xs text-amber-600">PEXELS_API_KEY is not configured on the server — add your own photos in &quot;Edit script &amp; options&quot; to create this video.</p>
+          )}
+          {hasPhotos && !working && (
+            <p className="text-xs text-muted-foreground flex items-center gap-1.5">
+              <ImageIcon size={13} /> Made with your {photos.length} photo{photos.length > 1 ? 's' : ''}.
+            </p>
+          )}
           {!supported && <p className="text-xs text-amber-600">This browser can&apos;t record video — open ManasikPro in Chrome or Edge on a computer.</p>}
 
           {!working && (
@@ -291,7 +307,7 @@ export default function VideoCard({
               {result && (
                 <button type="button" onClick={create} disabled={!canCreate} className="btn-secondary text-xs disabled:opacity-50">
                   <RefreshCw size={14} />
-                  New footage
+                  {hasPhotos ? 'Create again' : 'New footage'}
                 </button>
               )}
               <button type="button" onClick={() => setShowOptions((v) => !v)} className="btn-secondary text-xs">
@@ -300,7 +316,9 @@ export default function VideoCard({
               </button>
             </div>
           )}
-          {result && !working && <p className="text-[11px] text-muted-foreground">Footage: {result.credits.join(', ')} via Pexels (free for commercial use).</p>}
+          {result && !working && result.credits.length > 0 && (
+            <p className="text-[11px] text-muted-foreground">Footage: {result.credits.join(', ')} via Pexels (free for commercial use).</p>
+          )}
           {lockedByOther && !working && !result && <p className="text-[11px] text-muted-foreground">Another video is being edited — this one can start when it finishes.</p>}
         </div>
       </div>
@@ -317,7 +335,43 @@ export default function VideoCard({
           </label>
 
           <div>
-            <span className="text-xs font-medium text-muted-foreground">Footage keywords (English works best)</span>
+            <span className="text-xs font-medium text-muted-foreground">
+              Your photos {hasPhotos ? `(${photos.length}) — used instead of stock footage` : '— optional, replaces stock footage'}
+            </span>
+            <div className="flex flex-wrap gap-2 mt-2 mb-4">
+              {photos.map((f, i) => (
+                <div key={i} className="relative w-16 h-16 rounded-lg overflow-hidden border border-border bg-muted">
+                  {/* eslint-disable-next-line @next/next/no-img-element */}
+                  <img src={thumbs[i]} alt="" className="w-full h-full object-cover" />
+                  <button
+                    type="button"
+                    onClick={() => setPhotos(photos.filter((_, j) => j !== i))}
+                    className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/70 text-white flex items-center justify-center"
+                    aria-label="Remove photo"
+                  >
+                    <X size={11} />
+                  </button>
+                </div>
+              ))}
+              {photos.length < MAX_PHOTOS && (
+                <label className="w-16 h-16 rounded-lg border-2 border-dashed border-border flex flex-col items-center justify-center gap-0.5 text-[10px] font-medium text-muted-foreground cursor-pointer hover:border-primary hover:text-primary">
+                  <ImagePlus size={17} />
+                  Add
+                  <input
+                    type="file"
+                    accept="image/*"
+                    multiple
+                    className="hidden"
+                    onChange={(e) => {
+                      const added = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith('image/'));
+                      setPhotos([...photos, ...added].slice(0, MAX_PHOTOS));
+                      e.target.value = '';
+                    }}
+                  />
+                </label>
+              )}
+            </div>
+            <span className="text-xs font-medium text-muted-foreground">Footage keywords (English works best){hasPhotos ? ' — only used without photos' : ''}</span>
             <div className="flex flex-wrap gap-2 mt-2">
               {keywords.map((k) => (
                 <span key={k} className="inline-flex items-center gap-1 pl-2.5 pr-1 py-1 rounded-full bg-secondary text-secondary-foreground text-xs font-medium">

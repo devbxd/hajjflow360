@@ -1,7 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
-import { AlertTriangle, ArrowUp, Clapperboard, CreditCard, MessageSquare, ShieldAlert, Sparkles, SquarePen, Users } from 'lucide-react';
+import { AlertTriangle, ArrowUp, Clapperboard, CreditCard, MessageSquare, Paperclip, ShieldAlert, Sparkles, SquarePen, Users, X } from 'lucide-react';
 import type { DemoRequest, VideoRequest } from '@/lib/manasikAi/options';
 import Markdown from './Markdown';
 import VideoCard from './VideoCard';
@@ -14,6 +14,10 @@ interface Message {
   text: string;
   videos?: VideoRequest[];
   demoIds?: string[];
+  /** Photos the user attached to this message (user messages). */
+  photos?: File[];
+  /** Photos to use as footage for this reply's videos (assistant messages). */
+  videoPhotos?: File[];
   error?: boolean;
 }
 
@@ -37,7 +41,24 @@ const newId = () => `m${Date.now()}-${idCounter++}`;
 
 // What the model sees of past turns: video cards are summarised so follow-ups like
 // "make it shorter" or "now in Arabic" have the script to work from.
+const MAX_PHOTOS = 20;
+
+// Small thumbnail that owns its object URL.
+function PhotoThumb({ file, className }: { file: File; className: string }) {
+  const [url, setUrl] = useState<string | null>(null);
+  useEffect(() => {
+    const u = URL.createObjectURL(file);
+    setUrl(u);
+    return () => URL.revokeObjectURL(u);
+  }, [file]);
+  // eslint-disable-next-line @next/next/no-img-element
+  return url ? <img src={url} alt="" className={className} /> : <span className={className} />;
+}
+
 function historyText(m: Message) {
+  if (m.role === 'user' && m.photos?.length) {
+    return `${m.text}\n[The user attached ${m.photos.length} photo${m.photos.length > 1 ? 's' : ''} for the video. They will be used as the footage automatically.]`;
+  }
   const notes = (m.videos ?? []).map((v) => `[Video created — title: "${v.title}", language: ${v.language}, format: ${v.format}. Script: ${v.script}]`);
   for (const id of m.demoIds ?? []) {
     const d = getDemo(id);
@@ -60,6 +81,7 @@ export default function ManasikChat({
   const geminiReady = keyConfigured && !locked;
   const [messages, setMessages] = useState<Message[]>(() => savedMessages);
   const [input, setInput] = useState('');
+  const [pendingPhotos, setPendingPhotos] = useState<File[]>([]);
   const [thinking, setThinking] = useState(false);
   const [renderingId, setRenderingId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
@@ -83,7 +105,9 @@ export default function ManasikChat({
   const send = async (text: string) => {
     const question = text.trim();
     if (!question || thinking) return;
-    const next: Message[] = [...messages, { id: newId(), role: 'user', text: question }];
+    const photos = pendingPhotos;
+    setPendingPhotos([]);
+    const next: Message[] = [...messages, { id: newId(), role: 'user', text: question, photos }];
     setMessages(next);
     setInput('');
     setThinking(true);
@@ -99,7 +123,11 @@ export default function ManasikChat({
       if (!res.ok) throw new Error(data.error ?? `Request failed (${res.status})`);
       const demos: DemoRequest[] = data.demos ?? [];
       demos.forEach((r) => registerDemo(r, brandDefault));
-      setMessages((prev) => [...prev, { id: newId(), role: 'assistant', text: data.reply ?? '', videos: data.videos ?? [], demoIds: demos.map((r) => r.id) }]);
+      setMessages((prev) => [
+        ...prev,
+        // Photos sent with this question become the footage of the videos it produced.
+        { id: newId(), role: 'assistant', text: data.reply ?? '', videos: data.videos ?? [], demoIds: demos.map((r) => r.id), videoPhotos: photos.length ? photos : undefined },
+      ]);
     } catch (err) {
       setMessages((prev) => [
         ...prev,
@@ -217,6 +245,14 @@ export default function ManasikChat({
               m.role === 'user' ? (
                 <div key={m.id} className="flex justify-end slide-up">
                   <div className="max-w-[80%] rounded-2xl rounded-br-md bg-primary text-primary-foreground px-4 py-2.5 text-sm whitespace-pre-wrap" dir="auto">
+                    {!!m.photos?.length && (
+                      <div className="flex flex-wrap gap-1 mb-1.5">
+                        {m.photos.slice(0, 8).map((f, i) => (
+                          <PhotoThumb key={i} file={f} className="w-11 h-11 rounded-md object-cover border border-white/25" />
+                        ))}
+                        {m.photos.length > 8 && <span className="w-11 h-11 rounded-md bg-white/15 flex items-center justify-center text-xs font-semibold">+{m.photos.length - 8}</span>}
+                      </div>
+                    )}
                     {m.text}
                   </div>
                 </div>
@@ -242,6 +278,7 @@ export default function ManasikChat({
                       <VideoCard
                         key={v.id}
                         request={v}
+                        photos={m.videoPhotos}
                         brandDefault={brandDefault}
                         autoStart={m.id === lastAssistantId && renderingId === null && !startedVideos.has(v.id)}
                         pexelsReady={pexelsReady}
@@ -281,7 +318,44 @@ export default function ManasikChat({
         }}
         className="max-w-3xl w-full mx-auto"
       >
+        {pendingPhotos.length > 0 && (
+          <div className="flex flex-wrap items-center gap-1.5 mb-2">
+            {pendingPhotos.map((f, i) => (
+              <div key={i} className="relative">
+                <PhotoThumb file={f} className="w-14 h-14 rounded-lg object-cover border border-border" />
+                <button
+                  type="button"
+                  onClick={() => setPendingPhotos(pendingPhotos.filter((_, j) => j !== i))}
+                  className="absolute top-0.5 right-0.5 w-5 h-5 rounded-full bg-black/70 text-white flex items-center justify-center"
+                  aria-label="Remove photo"
+                >
+                  <X size={11} />
+                </button>
+              </div>
+            ))}
+            <span className="text-[11px] text-muted-foreground ml-1">
+              {pendingPhotos.length} photo{pendingPhotos.length > 1 ? 's' : ''} — the next video will use them
+            </span>
+          </div>
+        )}
         <div className="flex items-end gap-2 rounded-2xl border border-border bg-card p-2 shadow-sm focus-within:ring-2 focus-within:ring-ring">
+          {geminiReady && (
+            <label className="w-9 h-9 rounded-xl flex items-center justify-center flex-shrink-0 text-muted-foreground hover:bg-muted hover:text-primary cursor-pointer" title="Attach photos for a video">
+              <Paperclip size={18} />
+              <input
+                type="file"
+                accept="image/*"
+                multiple
+                className="hidden"
+                onChange={(e) => {
+                  const added = Array.from(e.target.files ?? []).filter((f) => f.type.startsWith('image/'));
+                  setPendingPhotos((prev) => [...prev, ...added].slice(0, MAX_PHOTOS));
+                  e.target.value = '';
+                  inputRef.current?.focus();
+                }}
+              />
+            </label>
+          )}
           <textarea
             ref={inputRef}
             value={input}
@@ -295,7 +369,9 @@ export default function ManasikChat({
             rows={1}
             dir="auto"
             disabled={!geminiReady}
-            placeholder={geminiReady ? 'Ask a question or describe the video you want…' : 'Manasik AI is not ready yet'}
+            placeholder={
+              !geminiReady ? 'Manasik AI is not ready yet' : pendingPhotos.length ? 'Describe the video to make with these photos…' : 'Ask a question or describe the video you want…'
+            }
             className="flex-1 resize-none bg-transparent px-2 py-2 text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none"
           />
           <button

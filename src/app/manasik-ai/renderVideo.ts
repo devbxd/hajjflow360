@@ -12,6 +12,8 @@ export interface RenderInput {
   voice: ArrayBuffer;
   words: CaptionWord[];
   clipUrls: string[];
+  /** The user's own photos; when present they replace the stock clips. */
+  photos?: File[];
   captions: boolean;
   rtl: boolean;
   brand: string;
@@ -126,14 +128,37 @@ function roundRect(ctx: CanvasRenderingContext2D, x: number, y: number, w: numbe
   ctx.closePath();
 }
 
-function drawCover(ctx: CanvasRenderingContext2D, video: HTMLVideoElement, w: number, h: number, zoom: number) {
-  const vw = video.videoWidth;
-  const vh = video.videoHeight;
+type Picture = HTMLVideoElement | ImageBitmap | HTMLImageElement;
+
+// Draws a video frame or photo so it covers the whole canvas (cropping the overflow).
+function drawCover(ctx: CanvasRenderingContext2D, src: Picture, w: number, h: number, zoom: number, panX = 0, panY = 0) {
+  const vw = src instanceof HTMLVideoElement ? src.videoWidth : src instanceof HTMLImageElement ? src.naturalWidth : src.width;
+  const vh = src instanceof HTMLVideoElement ? src.videoHeight : src instanceof HTMLImageElement ? src.naturalHeight : src.height;
   if (!vw || !vh) return;
   const scale = Math.max(w / vw, h / vh) * zoom;
   const dw = vw * scale;
   const dh = vh * scale;
-  ctx.drawImage(video, (w - dw) / 2, (h - dh) / 2, dw, dh);
+  ctx.drawImage(src, (w - dw) / 2 + panX, (h - dh) / 2 + panY, dw, dh);
+}
+
+// Decodes a user photo, honouring its EXIF orientation (phone pictures are often rotated).
+async function loadPhoto(file: File): Promise<ImageBitmap | HTMLImageElement> {
+  if (typeof createImageBitmap === 'function') {
+    try {
+      return await createImageBitmap(file, { imageOrientation: 'from-image' });
+    } catch {
+      // Fall back to an <img> below.
+    }
+  }
+  const url = URL.createObjectURL(file);
+  try {
+    const img = new Image();
+    img.src = url;
+    await img.decode();
+    return img;
+  } finally {
+    URL.revokeObjectURL(url);
+  }
 }
 
 function drawCaption(
@@ -247,18 +272,44 @@ export async function renderVideo(input: RenderInput): Promise<RenderResult> {
     const voiceBuffer = await audioCtx.decodeAudioData(input.voice.slice(0));
     const total = LEAD_IN + voiceBuffer.duration + TAIL;
     const segments = Math.max(1, Math.round(total / TARGET_SEGMENT));
-    const segLength = total / segments;
 
-    clips = await loadClips(input.clipUrls, Math.min(segments, MAX_CLIPS), input);
-    clips.forEach((c) => objectUrls.push(c.src));
-    if (!clips.length) throw new Error('None of the footage clips could be downloaded. Check your connection and try again.');
+    // The user's own photos replace stock footage: each gets a slow zoom/pan, with crossfades.
+    const photos: (ImageBitmap | HTMLImageElement)[] = [];
+    if (input.photos?.length) {
+      for (let i = 0; i < input.photos.length; i++) {
+        try {
+          photos.push(await loadPhoto(input.photos[i]));
+        } catch {
+          // An unreadable photo is skipped.
+        }
+        if (signal.aborted) throw abortError();
+        input.onProgress('footage', (i + 1) / input.photos.length);
+      }
+      if (!photos.length) throw new Error('None of the photos could be opened. Use JPG or PNG files.');
+    } else {
+      clips = await loadClips(input.clipUrls, Math.min(segments, MAX_CLIPS), input);
+      clips.forEach((c) => objectUrls.push(c.src));
+      if (!clips.length) throw new Error('None of the footage clips could be downloaded. Check your connection and try again.');
+    }
 
-    // Per segment: which clip, and where in that clip to start, so long clips show varied moments.
-    const plan = Array.from({ length: segments }, (_, i) => {
+    // Photos: every photo is shown (2.2–5 s each), cycling if the narration is longer.
+    // Clips: which clip per segment, and where in it to start, so long clips show varied moments.
+    const photoMode = photos.length > 0;
+    const segCount = photoMode ? Math.max(1, Math.round(total / Math.min(5, Math.max(2.2, total / photos.length)))) : segments;
+    const segDur = total / segCount;
+    const plan = Array.from({ length: segCount }, (_, i) => {
+      if (photoMode) return { photo: photos[i % photos.length], video: null as HTMLVideoElement | null, offset: 0 };
       const video = clips[i % clips.length];
-      const room = video.duration - segLength - 0.2;
-      return { video, offset: Number.isFinite(room) && room > 0 ? Math.random() * room : 0 };
+      const room = video.duration - segDur - 0.2;
+      return { photo: null, video: video as HTMLVideoElement | null, offset: Number.isFinite(room) && room > 0 ? Math.random() * room : 0 };
     });
+    // Ken Burns move for a photo segment at progress p (0..1): alternating zoom in/out and pan.
+    const photoMove = (seg: number, p: number) => ({
+      zoom: seg % 2 === 0 ? 1.04 + 0.1 * p : 1.14 - 0.1 * p,
+      panX: ((seg % 3) - 1) * 0.035 * W * (p - 0.5),
+      panY: (seg % 2 ? 1 : -1) * 0.02 * H * (p - 0.5),
+    });
+    const CROSSFADE = 0.5;
 
     let musicBuffer: AudioBuffer | null = null;
     if (input.music) {
@@ -328,7 +379,7 @@ export async function renderVideo(input: RenderInput): Promise<RenderResult> {
     }
     recorder.start(1000);
 
-    plan[0].video.currentTime = plan[0].offset;
+    if (plan[0].video) plan[0].video.currentTime = plan[0].offset;
     let activeSegment = -1;
 
     await new Promise<void>((resolve, reject) => {
@@ -343,23 +394,36 @@ export async function renderVideo(input: RenderInput): Promise<RenderResult> {
           return;
         }
 
-        const segIndex = Math.min(segments - 1, Math.floor(t / segLength));
-        if (segIndex !== activeSegment) {
-          const previous = activeSegment >= 0 ? plan[activeSegment].video : null;
-          const current = plan[segIndex];
-          if (previous && previous !== current.video) previous.pause();
-          if (previous !== current.video) current.video.currentTime = current.offset;
-          current.video.play().catch(() => {});
-          // Seek the next clip now so it is ready the moment its segment starts.
-          const next = plan[segIndex + 1];
-          if (next && next.video !== current.video) next.video.currentTime = next.offset;
-          activeSegment = segIndex;
+        const segIndex = Math.min(segCount - 1, Math.floor(t / segDur));
+        const segProgress = (t - segIndex * segDur) / segDur;
+        const { photo, video } = plan[segIndex];
+        if (photo) {
+          const m = photoMove(segIndex, segProgress);
+          const intoSeg = t - segIndex * segDur;
+          baseCtx.globalAlpha = 1;
+          const previousPhoto = segIndex > 0 ? plan[segIndex - 1].photo : null;
+          if (previousPhoto && intoSeg < CROSSFADE) {
+            // Crossfade: previous photo at the end of its move, then the new one fading in on top.
+            const pm = photoMove(segIndex - 1, 1);
+            drawCover(baseCtx, previousPhoto, W, H, pm.zoom, pm.panX, pm.panY);
+            baseCtx.globalAlpha = intoSeg / CROSSFADE;
+          }
+          drawCover(baseCtx, photo, W, H, m.zoom, m.panX, m.panY);
+          baseCtx.globalAlpha = 1;
+        } else if (video) {
+          if (segIndex !== activeSegment) {
+            const previous = activeSegment >= 0 ? plan[activeSegment].video : null;
+            if (previous && previous !== video) previous.pause();
+            if (previous !== video) video.currentTime = plan[segIndex].offset;
+            video.play().catch(() => {});
+            // Seek the next clip now so it is ready the moment its segment starts.
+            const next = plan[segIndex + 1];
+            if (next?.video && next.video !== video) next.video.currentTime = next.offset;
+            activeSegment = segIndex;
+          }
+          const zoom = segIndex % 2 === 0 ? 1 + 0.07 * segProgress : 1.07 - 0.07 * segProgress;
+          if (video.readyState >= 2 && !video.seeking) drawCover(baseCtx, video, W, H, zoom);
         }
-
-        const { video } = plan[segIndex];
-        const segProgress = (t - segIndex * segLength) / segLength;
-        const zoom = segIndex % 2 === 0 ? 1 + 0.07 * segProgress : 1.07 - 0.07 * segProgress;
-        if (video.readyState >= 2 && !video.seeking) drawCover(baseCtx, video, W, H, zoom);
 
         ctx.globalAlpha = 1;
         ctx.drawImage(base, 0, 0);
