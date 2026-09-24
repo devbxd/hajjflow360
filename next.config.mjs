@@ -10,7 +10,7 @@ const nextConfig = {
   // pg is Node-only (uses `fs`/`net`) — keep it un-bundled so the server
   // just requires it natively instead of webpack trying to statically
   // analyze its conditional requires.
-  serverExternalPackages: ['pg'],
+  serverExternalPackages: ['pg', 'msedge-tts'],
   productionBrowserSourceMaps: true,
   distDir: process.env.DIST_DIR || '.next',
   typescript: {

@@ -3,11 +3,12 @@
 import React, { useState, useEffect } from 'react';
 import Link from 'next/link';
 import { usePathname, useRouter } from 'next/navigation';
-import { LayoutDashboard, Users, UserCheck, ChevronLeft, ChevronRight, Plane, Building2, Bus, QrCode, Bell, Settings, LogOut, AlertTriangle, Layers, CreditCard, ScanLine, BookOpen, Receipt, TrendingUp, FileBarChart, ClipboardList, CalendarClock } from 'lucide-react';
+import { LayoutDashboard, Users, UserCheck, ChevronLeft, ChevronRight, Plane, Building2, Bus, QrCode, Bell, Settings, LogOut, AlertTriangle, Layers, CreditCard, ScanLine, BookOpen, Receipt, TrendingUp, FileBarChart, ClipboardList, CalendarClock, Sparkles } from 'lucide-react';
 import Icon from '@/components/ui/AppIcon';
 import { useCurrency, CURRENCIES, type CurrencyCode } from '@/lib/currency';
 import { readSidebarCollapsedDefault } from '@/lib/preferences';
 import NotificationBell from '@/components/NotificationBell';
+import { MANASIK_AI_ENABLED } from '@/lib/manasikAi/feature';
 
 
 interface NavCounts {
@@ -30,6 +31,7 @@ interface NavItem {
 
 const navItems: NavItem[] = [
   { label: 'Campaign Dashboard', href: '/', icon: LayoutDashboard, group: 'Overview' },
+  { label: 'Manasik IA', href: '/manasik-ai', icon: Sparkles, group: 'Overview' },
   { label: 'Pilgrim Management', href: '/pilgrim-management', icon: Users, badgeKey: 'pilgrimManagement', group: 'Pilgrims' },
   { label: 'Pilgrim Profile', href: '/pilgrim-profile', icon: ClipboardList, group: 'Pilgrims' },
   { label: 'Pilgrim Registry', href: '/pilgrim-registry', icon: BookOpen, group: 'Pilgrims' },
