@@ -2,7 +2,7 @@ import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
 import { MANASIK_AI_ENABLED, MANASIK_AI_LOCKED } from '@/lib/manasikAi/feature';
 import { getCurrentUser } from '@/lib/auth/currentUser';
-import { callGemini, textOf, GEMINI_MODELS, type GeminiContent } from '@/lib/manasikAi/gemini';
+import { converse } from '@/lib/manasikAi/converse';
 import { TOOL_DECLARATIONS, runTool } from '@/lib/manasikAi/assistantTools';
 import { defaultVoice, type VideoRequest } from '@/lib/manasikAi/options';
 
@@ -10,7 +10,6 @@ export const runtime = 'nodejs';
 export const dynamic = 'force-dynamic';
 export const maxDuration = 60;
 
-const MAX_TOOL_ROUNDS = 6;
 const MAX_HISTORY = 20;
 
 // Handled here rather than in assistantTools: it doesn't read data, it hands a
@@ -92,59 +91,32 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({ error: 'Ask a question first.' }, { status: 400 });
   }
 
-  const contents: GeminiContent[] = history.map((m) => ({
-    role: m.role === 'user' ? 'user' : 'model',
-    parts: [{ text: m.text.slice(0, 4000) }],
-  }));
-
-  let models = GEMINI_MODELS;
   const videos: VideoRequest[] = [];
-
-  for (let round = 0; round <= MAX_TOOL_ROUNDS; round++) {
-    const result = await callGemini(
-      {
-        systemInstruction: { parts: [{ text: systemPrompt() }] },
-        contents,
-        // On the last round, withhold the tools so the model has to answer with what it has.
-        tools: round < MAX_TOOL_ROUNDS ? [{ functionDeclarations: [...TOOL_DECLARATIONS, CREATE_VIDEO_DECLARATION] }] : undefined,
-        generationConfig: { temperature: 0.5 },
-      },
-      models
-    );
-    if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
-    // Stay on the same model for follow-up rounds: its function-call signatures are model-specific.
-    models = [result.model];
-
-    const calls = result.content.parts.filter((p) => p.functionCall);
-    if (!calls.length) {
-      const reply = textOf(result.content);
-      return NextResponse.json({ reply: reply || (videos.length ? '' : "Sorry, I couldn't find an answer to that."), videos });
+  const execute = async (name: string, args: Record<string, unknown>) => {
+    if (name === 'create_video') {
+      const video = toVideoRequest(args);
+      if (video && videos.length < 3) videos.push(video);
+      return video
+        ? { status: 'The video card is now shown in the chat and production has started in the browser.' }
+        : { error: 'The script was empty — write the full voice-over text in "script".' };
     }
+    try {
+      return await runTool(name, args, session.companyId);
+    } catch (err) {
+      return { error: err instanceof Error ? err.message : 'Tool failed.' };
+    }
+  };
 
-    // Echo the model turn back unchanged (it carries thought signatures), then answer every call.
-    contents.push(result.content);
-    const responses = await Promise.all(
-      calls.map(async ({ functionCall }) => {
-        const { name, args = {} } = functionCall!;
-        let output: unknown;
-        if (name === 'create_video') {
-          const video = toVideoRequest(args);
-          if (video && videos.length < 3) videos.push(video);
-          output = video
-            ? { status: 'The video card is now shown in the chat and production has started in the browser.' }
-            : { error: 'The script was empty — write the full voice-over text in "script".' };
-        } else {
-          try {
-            output = await runTool(name, args, session.companyId);
-          } catch (err) {
-            output = { error: err instanceof Error ? err.message : 'Tool failed.' };
-          }
-        }
-        return { functionResponse: { name, response: { result: output } } };
-      })
-    );
-    contents.push({ role: 'user', parts: responses });
-  }
-
-  return NextResponse.json({ error: 'The question needed too many steps. Try asking something more specific.' }, { status: 502 });
+  const result = await converse(
+    {
+      system: systemPrompt(),
+      history: history.map((m) => ({ role: m.role, text: m.text.slice(0, 4000) })),
+      declarations: [...TOOL_DECLARATIONS, CREATE_VIDEO_DECLARATION],
+      execute,
+    },
+    // The fallback run starts over, so drop anything the abandoned run queued.
+    () => (videos.length = 0)
+  );
+  if (!result.ok) return NextResponse.json({ error: result.error }, { status: result.status });
+  return NextResponse.json({ reply: result.reply || (videos.length ? '' : "Sorry, I couldn't find an answer to that."), videos });
 }

@@ -20,7 +20,7 @@ export default async function ManasikAiPage() {
       <ManasikChat
         locked={MANASIK_AI_LOCKED}
         brandDefault={company?.name ?? 'ManasikPro'}
-        geminiReady={Boolean(process.env.GEMINI_API_KEY)}
+        geminiReady={Boolean(process.env.GROQ_API_KEY || process.env.GEMINI_API_KEY)}
         pexelsReady={Boolean(process.env.PEXELS_API_KEY)}
       />
     </AppLayout>

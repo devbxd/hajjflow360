@@ -143,7 +143,7 @@ export default function ManasikChat({
         <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 flex gap-3 text-sm">
           <AlertTriangle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
           <p className="text-foreground">
-            <strong>Setup needed:</strong> add the free <span className="font-mono">GEMINI_API_KEY</span> (aistudio.google.com/app/apikey)
+            <strong>Setup needed:</strong> add the free <span className="font-mono">GROQ_API_KEY</span> (console.groq.com)
             {!pexelsReady && (
               <>
                 {' '}and <span className="font-mono">PEXELS_API_KEY</span> (pexels.com/api)

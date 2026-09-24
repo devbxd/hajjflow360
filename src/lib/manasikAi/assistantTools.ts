@@ -43,7 +43,7 @@ export const TOOL_DECLARATIONS = [
         bus_number: { type: 'INTEGER' },
         has_room: { type: 'BOOLEAN', description: 'true = has a hotel room assigned, false = no room yet.' },
         has_bus_seat: { type: 'BOOLEAN', description: 'true = has a bus seat, false = no seat yet.' },
-        limit: { type: 'INTEGER', description: 'Max pilgrims to return (default 25, max 100). The total count is always returned.' },
+        limit: { type: 'INTEGER', description: 'Max pilgrims to return (default 10, max 50). The total count is always returned.' },
       },
     },
   },
@@ -140,7 +140,7 @@ async function findPilgrims(args: Args, companyId: string) {
     if (args.has_bus_seat === false && p.seatNumber) return false;
     return true;
   });
-  const limit = Math.min(Math.max(Number(args.limit) || 25, 1), 100);
+  const limit = Math.min(Math.max(Number(args.limit) || 10, 1), 50);
   return {
     totalMatches: matches.length,
     totalPilgrimsInSeason: all.length,
