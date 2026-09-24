@@ -95,6 +95,20 @@ export default function ManasikChat({
 
   const lastAssistantId = [...messages].reverse().find((m) => m.role === 'assistant')?.id;
 
+  if (locked) {
+    return (
+      <div className="flex items-center justify-center h-[calc(100vh-3rem)]">
+        <div className="card-base max-w-md w-full text-center py-10 px-6">
+          <div className="w-14 h-14 mx-auto rounded-2xl bg-primary flex items-center justify-center">
+            <Sparkles size={26} className="text-accent" />
+          </div>
+          <h1 className="mt-4 text-xl font-semibold text-foreground">Manasik IA</h1>
+          <p className="mt-2 text-sm text-muted-foreground">Needs to be set up with an AI API.</p>
+        </div>
+      </div>
+    );
+  }
+
   return (
     <div className="flex flex-col h-[calc(100vh-3rem)] -my-1">
       {/* Header */}

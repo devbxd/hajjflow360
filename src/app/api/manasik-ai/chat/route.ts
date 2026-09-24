@@ -78,7 +78,7 @@ function toVideoRequest(args: Record<string, unknown>): VideoRequest | null {
 
 export async function POST(req: NextRequest) {
   if (!MANASIK_AI_ENABLED) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  if (MANASIK_AI_LOCKED) return NextResponse.json({ error: 'Manasik IA is not set up yet.' }, { status: 503 });
+  if (MANASIK_AI_LOCKED) return NextResponse.json({ error: 'Manasik IA needs to be set up with an AI API.' }, { status: 503 });
   const session = await getCurrentUser();
   if (!session) return NextResponse.json({ error: 'Please sign in again.' }, { status: 401 });
 

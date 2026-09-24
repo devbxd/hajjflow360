@@ -31,7 +31,7 @@ function pickFile(files: PexelsVideoFile[]) {
 
 export async function POST(req: NextRequest) {
   if (!MANASIK_AI_ENABLED) return NextResponse.json({ error: 'Not found' }, { status: 404 });
-  if (MANASIK_AI_LOCKED) return NextResponse.json({ error: 'Manasik IA is not set up yet.' }, { status: 503 });
+  if (MANASIK_AI_LOCKED) return NextResponse.json({ error: 'Manasik IA needs to be set up with an AI API.' }, { status: 503 });
   const apiKey = process.env.PEXELS_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: 'PEXELS_API_KEY is not configured on the server.' }, { status: 503 });
