@@ -34,7 +34,18 @@ function historyText(m: Message) {
   return [m.text, ...notes].filter(Boolean).join('\n');
 }
 
-export default function ManasikChat({ brandDefault, geminiReady, pexelsReady }: { brandDefault: string; geminiReady: boolean; pexelsReady: boolean }) {
+export default function ManasikChat({
+  brandDefault,
+  geminiReady: keyConfigured,
+  pexelsReady,
+  locked,
+}: {
+  brandDefault: string;
+  geminiReady: boolean;
+  pexelsReady: boolean;
+  locked: boolean;
+}) {
+  const geminiReady = keyConfigured && !locked;
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState(false);
@@ -105,7 +116,16 @@ export default function ManasikChat({ brandDefault, geminiReady, pexelsReady }: 
         )}
       </div>
 
-      {!geminiReady && (
+      {locked && (
+        <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 flex gap-3 text-sm">
+          <AlertTriangle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
+          <p className="text-foreground">
+            <strong>Setup needed.</strong> Manasik IA is not ready yet — it will be available soon.
+          </p>
+        </div>
+      )}
+
+      {!locked && !geminiReady && (
         <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 dark:bg-amber-950/30 dark:border-amber-800 px-4 py-3 flex gap-3 text-sm">
           <AlertTriangle size={18} className="text-amber-600 flex-shrink-0 mt-0.5" />
           <p className="text-foreground">
@@ -236,7 +256,7 @@ export default function ManasikChat({ brandDefault, geminiReady, pexelsReady }: 
             rows={1}
             dir="auto"
             disabled={!geminiReady}
-            placeholder={geminiReady ? 'Ask a question or describe the video you want…' : 'Manasik IA needs a Gemini key to work'}
+            placeholder={geminiReady ? 'Ask a question or describe the video you want…' : 'Manasik IA is not ready yet'}
             className="flex-1 resize-none bg-transparent px-2 py-2 text-sm text-foreground placeholder:text-muted-foreground/70 focus:outline-none"
           />
           <button

@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MANASIK_AI_ENABLED } from '@/lib/manasikAi/feature';
+import { MANASIK_AI_ENABLED, MANASIK_AI_LOCKED } from '@/lib/manasikAi/feature';
 import { MsEdgeTTS, OUTPUT_FORMAT } from 'msedge-tts';
 import { ALL_VOICE_IDS, type CaptionWord } from '@/lib/manasikAi/options';
 
@@ -59,6 +59,7 @@ function synthesize(text: string, voice: string, rate: string) {
 
 export async function POST(req: NextRequest) {
   if (!MANASIK_AI_ENABLED) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (MANASIK_AI_LOCKED) return NextResponse.json({ error: 'Manasik IA is not set up yet.' }, { status: 503 });
   const body = await req.json().catch(() => null);
   const text = typeof body?.text === 'string' ? body.text.trim() : '';
   const voice = typeof body?.voice === 'string' ? body.voice : '';

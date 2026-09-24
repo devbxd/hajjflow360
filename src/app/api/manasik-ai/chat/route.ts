@@ -1,6 +1,6 @@
 import { randomUUID } from 'crypto';
 import { NextRequest, NextResponse } from 'next/server';
-import { MANASIK_AI_ENABLED } from '@/lib/manasikAi/feature';
+import { MANASIK_AI_ENABLED, MANASIK_AI_LOCKED } from '@/lib/manasikAi/feature';
 import { getCurrentUser } from '@/lib/auth/currentUser';
 import { callGemini, textOf, GEMINI_MODELS, type GeminiContent } from '@/lib/manasikAi/gemini';
 import { TOOL_DECLARATIONS, runTool } from '@/lib/manasikAi/assistantTools';
@@ -78,6 +78,7 @@ function toVideoRequest(args: Record<string, unknown>): VideoRequest | null {
 
 export async function POST(req: NextRequest) {
   if (!MANASIK_AI_ENABLED) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (MANASIK_AI_LOCKED) return NextResponse.json({ error: 'Manasik IA is not set up yet.' }, { status: 503 });
   const session = await getCurrentUser();
   if (!session) return NextResponse.json({ error: 'Please sign in again.' }, { status: 401 });
 

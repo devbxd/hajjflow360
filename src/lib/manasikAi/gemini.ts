@@ -1,8 +1,9 @@
 // Minimal Google Gemini REST client shared by the Manasik IA routes.
 // Uses fetch directly so there is no SDK dependency to keep up to date.
 
-// Tried in order; a 404 (model retired or not enabled for the key) falls through to the next one.
-export const GEMINI_MODELS = [process.env.GEMINI_MODEL, 'gemini-flash-latest', 'gemini-2.5-flash', 'gemini-2.0-flash'].filter(
+// Tried in order. Free-tier quotas are counted per model, so when one model is
+// retired (404), rate-limited (429) or overloaded (5xx) the next one usually still answers.
+export const GEMINI_MODELS = [process.env.GEMINI_MODEL, 'gemini-flash-latest', 'gemini-3.6-flash', 'gemini-flash-lite-latest'].filter(
   (m, i, all): m is string => Boolean(m) && all.indexOf(m) === i
 );
 
@@ -27,13 +28,21 @@ export async function callGemini(body: Record<string, unknown>, models: string[]
   const apiKey = process.env.GEMINI_API_KEY;
   if (!apiKey) return { ok: false, status: 503, error: 'GEMINI_API_KEY is not configured on the server.' };
 
-  let last: GeminiResult = { ok: false, status: 502, error: 'The AI did not answer.' };
-  for (const model of models) {
-    const res = await fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
+  const send = (model: string) =>
+    fetch(`https://generativelanguage.googleapis.com/v1beta/models/${model}:generateContent`, {
       method: 'POST',
       headers: { 'Content-Type': 'application/json', 'x-goog-api-key': apiKey },
       body: JSON.stringify(body),
     }).catch(() => null);
+
+  let last: GeminiResult = { ok: false, status: 502, error: 'The AI did not answer.' };
+  for (const model of models) {
+    let res = await send(model);
+    // "High demand" spikes are usually brief: one retry on the same model before moving on.
+    if (res && res.status >= 500) {
+      await new Promise((r) => setTimeout(r, 1500));
+      res = await send(model);
+    }
 
     if (!res) {
       last = { ok: false, status: 502, error: 'Could not reach Google Gemini.' };
@@ -44,7 +53,12 @@ export async function callGemini(body: Record<string, unknown>, models: string[]
       continue;
     }
     if (res.status === 429) {
-      return { ok: false, status: 429, error: 'The free Gemini quota is used up for now. Wait a minute (or until tomorrow) and try again.' };
+      last = { ok: false, status: 429, error: 'The free Gemini quota is used up for now. Wait a minute (or until tomorrow) and try again.' };
+      continue;
+    }
+    if (res.status >= 500) {
+      last = { ok: false, status: 503, error: 'Google Gemini is overloaded right now. Please try again in a moment.' };
+      continue;
     }
     if (!res.ok) {
       const detail = await res.json().catch(() => null);

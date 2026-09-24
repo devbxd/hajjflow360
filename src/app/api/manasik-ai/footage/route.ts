@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
-import { MANASIK_AI_ENABLED } from '@/lib/manasikAi/feature';
+import { MANASIK_AI_ENABLED, MANASIK_AI_LOCKED } from '@/lib/manasikAi/feature';
 import type { FootageClip } from '@/lib/manasikAi/options';
 
 export const runtime = 'nodejs';
@@ -31,6 +31,7 @@ function pickFile(files: PexelsVideoFile[]) {
 
 export async function POST(req: NextRequest) {
   if (!MANASIK_AI_ENABLED) return NextResponse.json({ error: 'Not found' }, { status: 404 });
+  if (MANASIK_AI_LOCKED) return NextResponse.json({ error: 'Manasik IA is not set up yet.' }, { status: 503 });
   const apiKey = process.env.PEXELS_API_KEY;
   if (!apiKey) {
     return NextResponse.json({ error: 'PEXELS_API_KEY is not configured on the server.' }, { status: 503 });
