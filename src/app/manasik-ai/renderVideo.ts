@@ -86,13 +86,13 @@ async function loadClips(urls: string[], wanted: number, input: RenderInput) {
   return clips;
 }
 
-interface Caption {
+export interface Caption {
   words: CaptionWord[];
   start: number;
   end: number;
 }
 
-function groupCaptions(words: CaptionWord[], maxWords: number, maxChars: number): Caption[] {
+export function groupCaptions(words: CaptionWord[], maxWords: number, maxChars: number): Caption[] {
   const groups: Caption[] = [];
   let current: CaptionWord[] = [];
   let chars = 0;

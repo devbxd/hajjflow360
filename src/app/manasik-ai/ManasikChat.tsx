@@ -2,17 +2,26 @@
 
 import React, { useEffect, useRef, useState } from 'react';
 import { AlertTriangle, ArrowUp, Clapperboard, CreditCard, MessageSquare, ShieldAlert, Sparkles, SquarePen, Users } from 'lucide-react';
-import type { VideoRequest } from '@/lib/manasikAi/options';
+import type { DemoRequest, VideoRequest } from '@/lib/manasikAi/options';
 import Markdown from './Markdown';
 import VideoCard from './VideoCard';
+import DemoCard from './DemoCard';
+import { clearDemos, getDemo, registerDemo } from './demoRecorder';
 
 interface Message {
   id: string;
   role: 'user' | 'assistant';
   text: string;
   videos?: VideoRequest[];
+  demoIds?: string[];
   error?: boolean;
 }
+
+// Kept outside React: a live demo navigates away from this page (unmounting the chat) and
+// comes back, and the conversation should still be there.
+let savedMessages: Message[] = [];
+// Videos that already started once, so coming back to the chat doesn't auto-start them again.
+const startedVideos = new Set<string>();
 
 const SUGGESTIONS: { icon: React.ElementType; label: string; prompt: string }[] = [
   { icon: CreditCard, label: 'Unpaid balances', prompt: 'Which pilgrims still have an unpaid balance, and how much is outstanding in total?' },
@@ -29,8 +38,11 @@ const newId = () => `m${Date.now()}-${idCounter++}`;
 // What the model sees of past turns: video cards are summarised so follow-ups like
 // "make it shorter" or "now in French" have the script to work from.
 function historyText(m: Message) {
-  if (!m.videos?.length) return m.text;
-  const notes = m.videos.map((v) => `[Video created — title: "${v.title}", language: ${v.language}, format: ${v.format}. Script: ${v.script}]`);
+  const notes = (m.videos ?? []).map((v) => `[Video created — title: "${v.title}", language: ${v.language}, format: ${v.format}. Script: ${v.script}]`);
+  for (const id of m.demoIds ?? []) {
+    const d = getDemo(id);
+    if (d) notes.push(`[Live demo created — title: "${d.title}", language: ${d.language}. Scenes: ${d.scenes.map((s) => `${s.page}: ${s.narration}`).join(' | ')}]`);
+  }
   return [m.text, ...notes].filter(Boolean).join('\n');
 }
 
@@ -46,12 +58,16 @@ export default function ManasikChat({
   locked: boolean;
 }) {
   const geminiReady = keyConfigured && !locked;
-  const [messages, setMessages] = useState<Message[]>([]);
+  const [messages, setMessages] = useState<Message[]>(() => savedMessages);
   const [input, setInput] = useState('');
   const [thinking, setThinking] = useState(false);
   const [renderingId, setRenderingId] = useState<string | null>(null);
   const scrollRef = useRef<HTMLDivElement>(null);
   const inputRef = useRef<HTMLTextAreaElement>(null);
+
+  useEffect(() => {
+    savedMessages = messages;
+  }, [messages]);
 
   useEffect(() => {
     scrollRef.current?.scrollTo({ top: scrollRef.current.scrollHeight, behavior: 'smooth' });
@@ -81,7 +97,9 @@ export default function ManasikChat({
       });
       const data = await res.json().catch(() => ({}));
       if (!res.ok) throw new Error(data.error ?? `Request failed (${res.status})`);
-      setMessages((prev) => [...prev, { id: newId(), role: 'assistant', text: data.reply ?? '', videos: data.videos ?? [] }]);
+      const demos: DemoRequest[] = data.demos ?? [];
+      demos.forEach((r) => registerDemo(r, brandDefault));
+      setMessages((prev) => [...prev, { id: newId(), role: 'assistant', text: data.reply ?? '', videos: data.videos ?? [], demoIds: demos.map((r) => r.id) }]);
     } catch (err) {
       setMessages((prev) => [
         ...prev,
@@ -123,7 +141,10 @@ export default function ManasikChat({
           </div>
         </div>
         {messages.length > 0 && (
-          <button type="button" onClick={() => setMessages([])} disabled={thinking || renderingId !== null} className="btn-secondary text-sm disabled:opacity-50">
+          <button type="button" onClick={() => {
+              clearDemos();
+              setMessages([]);
+            }} disabled={thinking || renderingId !== null} className="btn-secondary text-sm disabled:opacity-50">
             <SquarePen size={15} />
             New chat
           </button>
@@ -222,12 +243,16 @@ export default function ManasikChat({
                         key={v.id}
                         request={v}
                         brandDefault={brandDefault}
-                        autoStart={m.id === lastAssistantId && renderingId === null}
+                        autoStart={m.id === lastAssistantId && renderingId === null && !startedVideos.has(v.id)}
                         pexelsReady={pexelsReady}
                         lockedByOther={renderingId !== null && renderingId !== v.id}
-                        onBusyChange={(busy) => setRenderingId((current) => (busy ? v.id : current === v.id ? null : current))}
+                        onBusyChange={(busy) => {
+                          if (busy) startedVideos.add(v.id);
+                          setRenderingId((current) => (busy ? v.id : current === v.id ? null : current));
+                        }}
                       />
                     ))}
+                    {m.demoIds?.map((id) => <DemoCard key={id} id={id} />)}
                   </div>
                 </div>
               )

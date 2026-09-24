@@ -91,3 +91,30 @@ export interface VideoRequest {
   format: VideoFormat;
   voice: string;
 }
+
+// Pages a live demo can visit, with what each one shows (the AI writes the narration from
+// this). Settings and New Season are left out on purpose: they change account configuration.
+export const DEMO_PAGES: Record<string, { path: string; label: string; what: string }> = {
+  dashboard: { path: '/', label: 'Campaign Dashboard', what: 'campaign overview: pilgrim totals, visa, passport and payment progress, charts, at-risk pilgrims, operations alerts' },
+  'pilgrim-management': { path: '/pilgrim-management', label: 'Pilgrim Management', what: 'every pilgrim with status, search and filters, add, import and bulk actions' },
+  'pilgrim-registry': { path: '/pilgrim-registry', label: 'Pilgrim Registry', what: 'the full registry of pilgrims with their documents' },
+  'group-leaders': { path: '/group-leader-dashboard', label: 'Group Leaders', what: 'each group leader with their pilgrims, progress and WhatsApp messages' },
+  'passport-scanning': { path: '/passport-scanning', label: 'Passport Scanning', what: 'scan a passport with the camera; the MRZ is read automatically to fill the pilgrim record' },
+  allocation: { path: '/allocation-management', label: 'Allocation Management', what: 'assign flights, hotel rooms and bus seats, with auto-assign' },
+  payments: { path: '/payments', label: 'Payments', what: 'payment status per pilgrim, installments, overdue balances and payment history' },
+  'qr-checkin': { path: '/qr-checkin', label: 'QR Check-in', what: 'check pilgrims in by scanning their QR code at the bus, hotel or airport' },
+  'emergency-lists': { path: '/emergency-lists', label: 'Emergency Lists', what: 'emergency contacts and at-risk pilgrims, ready to print' },
+  notifications: { path: '/notifications', label: 'Notifications', what: 'the activity feed of everything happening in the campaign' },
+  invoicing: { path: '/invoicing-receipts', label: 'Invoicing & Receipts', what: 'invoices and receipts with PDF download, linked to payments' },
+  'revenue-expenses': { path: '/revenue-expenses', label: 'Revenue & Expenses', what: 'income against expenses, with charts and net result' },
+  reports: { path: '/reports-export', label: 'Reports & Export', what: 'reports and exports to Excel and PDF' },
+};
+
+// A live demo the assistant planned; recorded in the browser by the chat's demo card.
+export interface DemoRequest {
+  id: string;
+  title: string;
+  language: LanguageOption['code'];
+  voice: string;
+  scenes: { page: string; narration: string }[];
+}
