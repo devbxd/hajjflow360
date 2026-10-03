@@ -1,11 +1,11 @@
 'use client';
 
 import Link from 'next/link';
-import { useEffect, useState } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import {
   ArrowRight, BookOpen, CalendarClock, CheckCircle2, FileSpreadsheet, Languages, Layers,
-  LayoutDashboard, LogIn, Map, MessageCircle, Phone, Plane, Receipt, ScanLine, ShieldCheck,
-  Siren, UserCheck, Users, Wallet,
+  LayoutDashboard, LogIn, Map, MessageCircle, Pause, Phone, Play, Plane, Receipt, RotateCcw,
+  RotateCw, ScanLine, ShieldCheck, Siren, UserCheck, Users, Wallet,
 } from 'lucide-react';
 import { Reveal } from './reveal';
 
@@ -368,6 +368,30 @@ export function LandingPage() {
     }
   };
 
+  const videoRef = useRef<HTMLVideoElement>(null);
+  useEffect(() => {
+    const v = videoRef.current;
+    if (!v) return;
+    const sync = () => setPlaying(!v.paused);
+    v.addEventListener("play", sync);
+    v.addEventListener("pause", sync);
+    return () => { v.removeEventListener("play", sync); v.removeEventListener("pause", sync); };
+  }, []);
+  const [playing, setPlaying] = useState(true);
+
+  const togglePlay = () => {
+    const v = videoRef.current;
+    if (!v) return;
+    if (v.paused) v.play();
+    else v.pause();
+  };
+
+  const skip = (seconds: number) => {
+    const v = videoRef.current;
+    if (!v) return;
+    v.currentTime = Math.min(Math.max(0, v.currentTime + seconds), v.duration || Infinity);
+  };
+
   const t = COPY[lang];
   const isAr = lang === 'ar';
   const whatsappHref = `${WHATSAPP_URL}?text=${encodeURIComponent(t.whatsappMessage)}`;
@@ -406,7 +430,7 @@ export function LandingPage() {
 
       <section className="bg-[#0F2F24] text-white">
         <div className="mx-auto max-w-7xl px-5 pt-12 pb-16 sm:px-8 sm:pt-16 sm:pb-24 lg:pt-24">
-          <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_1fr]">
+          <div className="grid items-center gap-14 lg:grid-cols-[0.9fr_1.25fr]">
             <div>
               <p className="text-sm font-semibold tracking-wide text-[#C5A028] uppercase">{t.hero.eyebrow}</p>
               <h1 className="mt-4 text-4xl leading-[1.15] font-bold tracking-tight text-balance sm:text-5xl lg:text-6xl">{t.hero.title}</h1>
@@ -422,23 +446,39 @@ export function LandingPage() {
                 </a>
               </div>
             </div>
-            <figure className="bg-card overflow-hidden rounded-xl border border-white/15 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.6)] transition-transform duration-500 hover:-translate-y-1">
+            <figure className="bg-card overflow-hidden rounded-xl border border-white/15 shadow-[0_30px_80px_-30px_rgba(0,0,0,0.6)]">
               <div className="border-border flex items-center gap-1.5 border-b px-4 py-2.5">
                 <span className="bg-border size-2.5 rounded-full" />
                 <span className="bg-border size-2.5 rounded-full" />
                 <span className="bg-border size-2.5 rounded-full" />
               </div>
               <video
+                ref={videoRef}
                 src="/hero-video.mp4"
                 poster="/showcase/dashboard.png"
                 autoPlay
                 muted
                 loop
                 playsInline
+                controls
                 preload="metadata"
                 aria-label={t.alts.dashboard}
                 className="block w-full"
               />
+              <div className="flex items-center justify-center gap-2 border-t border-border bg-card px-4 py-3">
+                <button type="button" onClick={() => skip(-5)} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
+                  <RotateCcw className="size-4" />
+                  5s
+                </button>
+                <button type="button" onClick={togglePlay} className="bg-primary text-primary-foreground inline-flex items-center gap-1.5 rounded-lg px-4 py-1.5 text-sm font-semibold transition-all hover:brightness-110">
+                  {playing ? <Pause className="size-4" /> : <Play className="size-4" />}
+                  {playing ? (isAr ? "إيقاف" : "Pause") : (isAr ? "تشغيل" : "Play")}
+                </button>
+                <button type="button" onClick={() => skip(5)} className="inline-flex items-center gap-1.5 rounded-lg border border-border px-3 py-1.5 text-sm font-medium text-foreground transition-colors hover:bg-secondary">
+                  5s
+                  <RotateCw className="size-4" />
+                </button>
+              </div>
             </figure>
           </div>
         </div>
