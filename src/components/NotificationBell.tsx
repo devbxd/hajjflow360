@@ -1,6 +1,7 @@
 'use client';
 
 import React, { useEffect, useRef, useState } from 'react';
+import { createPortal } from 'react-dom';
 import Link from 'next/link';
 import {
   Bell, CheckCircle2, CreditCard, ScanLine, AlertTriangle, Bus, MessageSquare, QrCode, Loader2,
@@ -22,6 +23,8 @@ export default function NotificationBell({ count }: { count: number }) {
   const [open, setOpen] = useState(false);
   const [activity, setActivity] = useState<ActivityEntry[] | null>(null);
   const ref = useRef<HTMLDivElement>(null);
+  const panelRef = useRef<HTMLDivElement>(null);
+  const [anchor, setAnchor] = useState<{ top: number; left: number } | null>(null);
 
   useEffect(() => {
     if (!open) return;
@@ -33,7 +36,9 @@ export default function NotificationBell({ count }: { count: number }) {
 
   useEffect(() => {
     const onClickOutside = (e: MouseEvent) => {
-      if (ref.current && !ref.current.contains(e.target as Node)) setOpen(false);
+      const target = e.target as Node;
+      if (ref.current?.contains(target) || panelRef.current?.contains(target)) return;
+      setOpen(false);
     };
     document.addEventListener('mousedown', onClickOutside);
     return () => document.removeEventListener('mousedown', onClickOutside);
@@ -42,7 +47,11 @@ export default function NotificationBell({ count }: { count: number }) {
   return (
     <div className="relative" ref={ref}>
       <button
-        onClick={() => setOpen((v) => !v)}
+        onClick={(e) => {
+          const r = e.currentTarget.getBoundingClientRect();
+          setAnchor({ top: r.bottom + 8, left: r.left });
+          setOpen((v) => !v);
+        }}
         className="relative p-1.5 rounded-md hover:bg-muted text-muted-foreground transition-colors flex-shrink-0"
         aria-label="Notification Center"
         title="Notification Center"
@@ -55,8 +64,8 @@ export default function NotificationBell({ count }: { count: number }) {
         )}
       </button>
 
-      {open && (
-        <div className="absolute left-0 top-full mt-2 w-80 bg-card border border-border rounded-xl shadow-xl z-50 slide-up overflow-hidden">
+      {open && anchor && createPortal(
+        <div ref={panelRef} style={{ position: 'fixed', top: anchor.top, left: anchor.left }} className="w-80 bg-card border border-border rounded-xl shadow-xl z-[60] slide-up overflow-hidden">
           <div className="px-4 py-3 border-b border-border flex items-center justify-between">
             <h3 className="text-sm font-semibold text-foreground">Notification Center</h3>
             <Link href="/notifications" onClick={() => setOpen(false)} className="text-xs text-primary hover:underline">
@@ -85,7 +94,8 @@ export default function NotificationBell({ count }: { count: number }) {
               })
             )}
           </div>
-        </div>
+        </div>,
+        document.body
       )}
     </div>
   );
