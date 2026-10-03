@@ -30,18 +30,18 @@ function MetricCard({
 }) {
   return (
     <div
-      className={`card-base flex flex-col gap-3 ${colSpan ?? ''} ${
+      className={`card-base flex flex-col gap-3 hover:border-muted-foreground/30 hover:shadow-md ${colSpan ?? ''} ${
         accent ? 'border-l-4 border-l-accent' : ''
       }`}
     >
       <div className="flex items-start justify-between">
-        <p className="text-xs font-500 uppercase tracking-wide text-muted-foreground">{label}</p>
+        <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
         <div className={`p-2 rounded-lg ${iconBg}`}>
           <Icon size={16} className={iconColor} />
         </div>
       </div>
       <div>
-        <p className="text-3xl font-bold tabular-nums text-foreground">{value}</p>
+        <p className="text-3xl font-semibold tracking-tight tabular-nums text-foreground">{value}</p>
         {sub && (
           <p className={`text-xs mt-1 font-medium ${subColor ?? 'text-muted-foreground'}`}>{sub}</p>
         )}
@@ -71,10 +71,10 @@ function ProgressCard({
   const processingPct = processing && total > 0 ? Math.round((processing / total) * 100) : 0;
 
   return (
-    <div className="card-base flex flex-col gap-3">
-      <p className="text-xs font-500 uppercase tracking-wide text-muted-foreground">{label}</p>
+    <div className="card-base flex flex-col gap-3 hover:border-muted-foreground/30 hover:shadow-md">
+      <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">{label}</p>
       <div className="flex items-end gap-2">
-        <p className="text-3xl font-bold tabular-nums text-foreground">{approvedPct}%</p>
+        <p className="text-3xl font-semibold tracking-tight tabular-nums text-foreground">{approvedPct}%</p>
         <p className="text-sm text-muted-foreground pb-1">approved</p>
       </div>
       <div className="flex h-2 rounded-full overflow-hidden gap-0.5">
@@ -118,16 +118,16 @@ export default function MetricsBentoGrid({ stats }: { stats: CampaignStats }) {
   return (
     <div className="grid grid-cols-2 md:grid-cols-3 lg:grid-cols-4 xl:grid-cols-4 2xl:grid-cols-4 gap-4 mb-6">
       {/* Hero — Total Pilgrims spans 2 cols */}
-      <div className="col-span-2 card-base flex flex-col gap-3 border-l-4 border-l-primary">
+      <div className="col-span-2 card-base flex flex-col gap-3 border-l-4 border-l-primary bg-gradient-to-br from-card to-secondary/40 hover:shadow-md">
         <div className="flex items-start justify-between">
-          <p className="text-xs font-500 uppercase tracking-wide text-muted-foreground">Total Pilgrims Registered</p>
+          <p className="text-[11px] font-semibold uppercase tracking-widest text-muted-foreground">Total Pilgrims Registered</p>
           <div className="p-2 rounded-lg bg-secondary">
             <Users size={16} className="text-primary" />
           </div>
         </div>
         <div className="flex items-end gap-4">
           <div>
-            <p className="text-4xl font-bold tabular-nums text-primary">{s.totalPilgrims.toLocaleString()}</p>
+            <p className="text-4xl font-semibold tracking-tight tabular-nums text-primary">{s.totalPilgrims.toLocaleString()}</p>
             <p className="text-sm text-muted-foreground mt-1">of {s.capacity} capacity — {Math.round((s.totalPilgrims / s.capacity) * 100)}% filled</p>
           </div>
           <div className="flex-1 pb-1">

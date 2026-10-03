@@ -124,10 +124,10 @@ export default function Sidebar() {
 
       {/* Campaign Badge */}
       {!collapsed && (
-        <div className="mx-3 mt-3 px-3 py-2 rounded-lg bg-secondary border border-primary/20">
-          <p className="text-xs text-muted-foreground font-medium">Active Season</p>
-          <p className="text-sm font-semibold text-primary truncate">{navCounts?.activeSeasonName ?? '...'}</p>
-          <p className="text-xs text-muted-foreground">{navCounts?.totalPilgrims ?? '...'} pilgrims · since {navCounts?.activeSeasonStart ?? '—'}</p>
+        <div className="mx-3 mt-3 px-3.5 py-3 rounded-xl bg-secondary border border-primary/15 shadow-sm">
+          <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-widest">Active Season</p>
+          <p className="mt-1 text-sm font-semibold text-primary truncate">{navCounts?.activeSeasonName ?? '...'}</p>
+          <p className="mt-0.5 text-xs text-muted-foreground">{navCounts?.totalPilgrims ?? '...'} pilgrims · since {navCounts?.activeSeasonStart ?? '—'}</p>
         </div>
       )}
 
@@ -145,7 +145,7 @@ export default function Sidebar() {
           return (
             <div key={`group-${group}`}>
               {!collapsed && (
-                <p className="px-3 pb-1 text-xs font-600 uppercase tracking-widest text-muted-foreground/60">
+                <p className="px-3 pb-1.5 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">
                   {group}
                 </p>
               )}
@@ -185,11 +185,11 @@ export default function Sidebar() {
       {/* Display Currency */}
       {!collapsed && (
         <div className="px-3 pb-3">
-          <p className="px-0 pb-1 text-xs font-600 uppercase tracking-widest text-muted-foreground/60">Display Currency</p>
+          <p className="px-0 pb-1.5 text-[11px] font-semibold uppercase tracking-widest text-muted-foreground/70">Display Currency</p>
           <select
             value={currency}
             onChange={(e) => setCurrency(e.target.value as CurrencyCode)}
-            className="w-full text-sm border border-border rounded-lg px-2.5 py-1.5 bg-input text-foreground focus:outline-none focus:ring-2 focus:ring-ring"
+            className="w-full text-sm border border-border rounded-lg px-2.5 py-1.5 bg-input text-foreground shadow-sm transition-colors hover:border-muted-foreground/40 focus:outline-none focus:ring-2 focus:ring-ring"
           >
             {CURRENCIES.map((c) => (
               <option key={c.code} value={c.code}>{c.symbol} {c.label}</option>
@@ -200,7 +200,7 @@ export default function Sidebar() {
 
       {/* User */}
       <div className={`border-t border-border p-3 flex items-center gap-3 ${collapsed ? 'justify-center' : ''}`}>
-        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0">
+        <div className="w-8 h-8 rounded-full bg-primary flex items-center justify-center flex-shrink-0 ring-2 ring-primary/15">
           <span className="text-xs font-semibold text-primary-foreground">{initials}</span>
         </div>
         {!collapsed && (
@@ -210,7 +210,7 @@ export default function Sidebar() {
           </div>
         )}
         {!collapsed && (
-          <button onClick={handleSignOut} className="p-1 rounded hover:bg-muted text-muted-foreground" title="Sign out">
+          <button onClick={handleSignOut} className="p-1.5 rounded-md hover:bg-muted text-muted-foreground hover:text-foreground transition-colors" title="Sign out">
             <LogOut size={14} />
           </button>
         )}
