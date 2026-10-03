@@ -9,6 +9,7 @@ import { useCurrency, CURRENCIES, type CurrencyCode } from '@/lib/currency';
 import { readSidebarCollapsedDefault } from '@/lib/preferences';
 import NotificationBell from '@/components/NotificationBell';
 import { MANASIK_AI_ENABLED } from '@/lib/manasikAi/feature';
+import { ADMIN_COMPANY_ID } from '@/lib/auth/adminCompany';
 
 
 interface NavCounts {
@@ -54,10 +55,12 @@ const navItems: NavItem[] = [
 ];
 
 const groups = ['Overview', 'Pilgrims', 'Logistics', 'Operations', 'Finance', 'Season', 'System'];
+const adminNavItems: NavItem[] = [{ label: 'Gestion des comptes', href: '/accounts', icon: Users, group: 'Admin' }];
 
 export default function Sidebar() {
   const [collapsed, setCollapsed] = useState(false);
   const [displayName, setDisplayName] = useState('...');
+  const [isAdminCompany, setIsAdminCompany] = useState(false);
   const [navCounts, setNavCounts] = useState<NavCounts | null>(null);
   const pathname = usePathname();
   const router = useRouter();
@@ -79,6 +82,7 @@ export default function Sidebar() {
       .then((res) => (res.ok ? res.json() : null))
       .then((data) => {
         if (data?.user?.displayName) setDisplayName(data.user.displayName);
+        if (data?.user?.companyId === ADMIN_COMPANY_ID) setIsAdminCompany(true);
       })
       .catch(() => {});
   }, []);
@@ -123,7 +127,7 @@ export default function Sidebar() {
       </div>
 
       {/* Campaign Badge */}
-      {!collapsed && (
+      {!collapsed && !isAdminCompany && (
         <div className="mx-3 mt-3 px-3.5 py-3 rounded-xl bg-secondary border border-primary/15 shadow-sm">
           <p className="text-[11px] text-muted-foreground font-semibold uppercase tracking-widest">Active Season</p>
           <p className="mt-1 text-sm font-semibold text-primary truncate">{navCounts?.activeSeasonName ?? '...'}</p>
@@ -133,8 +137,8 @@ export default function Sidebar() {
 
       {/* Nav Items */}
       <nav className="flex-1 overflow-y-auto scrollbar-thin px-2 py-3 space-y-4">
-        {groups.map((group) => {
-          const items = navItems.filter((n) => n.group === group);
+        {(isAdminCompany ? ['Admin'] : groups).map((group) => {
+          const items = (isAdminCompany ? adminNavItems : navItems).filter((n) => n.group === group);
           // Deduplicate by label for display
           const seen = new Set<string>();
           const uniqueItems = items.filter((item) => {

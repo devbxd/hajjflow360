@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import bcrypt from 'bcryptjs';
 import { getCurrentUser } from '@/lib/auth/currentUser';
 import { findUser, updatePasswordHash } from '@/lib/auth/users';
+import { savePasswordRecord } from '@/lib/auth/passwordVault';
 
 export async function POST(req: NextRequest) {
   const session = await getCurrentUser();
@@ -31,6 +32,7 @@ export async function POST(req: NextRequest) {
 
   const newHash = bcrypt.hashSync(newPassword, 10);
   await updatePasswordHash(session.username, newHash);
+  await savePasswordRecord(session.username, newPassword);
 
   return NextResponse.json({ ok: true });
 }

@@ -237,3 +237,10 @@ FROM pilgrims p
 LEFT JOIN (
   SELECT pilgrim_id, SUM(amount) AS paid FROM payments WHERE status = 'cleared' GROUP BY pilgrim_id
 ) pay ON pay.pilgrim_id = p.id;
+
+
+CREATE TABLE IF NOT EXISTS staff_password_vault (
+  username TEXT PRIMARY KEY REFERENCES staff_users(username) ON DELETE CASCADE,
+  password_enc TEXT NOT NULL,
+  updated_at TIMESTAMPTZ NOT NULL DEFAULT now()
+);

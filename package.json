@@ -48,7 +48,9 @@
     "serve": "next start",
     "type-check": "tsc --noEmit",
     "db:migrate": "node --env-file=.env db/migrate.mjs",
-    "db:seed": "tsx --env-file=.env db/seed.ts"
+    "db:seed": "tsx --env-file=.env db/seed.ts",
+    "db:create-test-user": "tsx --env-file=.env db/create-test-user.ts",
+    "db:create-admin": "tsx --env-file=.env db/create-admin.ts"
   },
   "dependencies": {
     "@dhiwise/component-tagger": "^1.0.16",
