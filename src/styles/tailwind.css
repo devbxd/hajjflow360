@@ -233,52 +233,71 @@
   .card-base {
     background-color: var(--card);
     border: 1px solid var(--border);
-    border-radius: var(--radius);
+    border-radius: 12px;
     padding: 1.25rem;
+    box-shadow: 0 1px 2px rgba(26, 26, 26, 0.04), 0 1px 1px rgba(26, 26, 26, 0.02);
+    transition: border-color 200ms ease, box-shadow 200ms ease;
   }
 
   .btn-primary {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     padding: 8px 16px;
     background-color: var(--primary);
     color: var(--primary-foreground);
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 150ms ease;
-    border: none;
+    transition: background-color 150ms ease, box-shadow 150ms ease, transform 150ms ease;
+    border: 1px solid transparent;
+    box-shadow: 0 1px 2px rgba(26, 26, 26, 0.12);
     outline: none;
   }
 
   .btn-primary:hover {
     background-color: #155a3e;
+    box-shadow: 0 2px 6px rgba(27, 107, 74, 0.25);
+  }
+
+  .dark .btn-primary:hover {
+    background-color: #3AAB79;
   }
 
   .btn-primary:active {
     transform: scale(0.97);
   }
 
+  .btn-primary:focus-visible,
+  .btn-secondary:focus-visible,
+  .nav-item:focus-visible {
+    outline: 2px solid var(--ring);
+    outline-offset: 2px;
+  }
+
   .btn-secondary {
     display: inline-flex;
     align-items: center;
+    justify-content: center;
     gap: 6px;
     padding: 8px 16px;
-    background-color: var(--muted);
+    background-color: var(--card);
     color: var(--foreground);
-    border-radius: 8px;
+    border-radius: 10px;
     font-size: 14px;
     font-weight: 500;
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: background-color 150ms ease, border-color 150ms ease, transform 150ms ease;
     border: 1px solid var(--border);
+    box-shadow: 0 1px 2px rgba(26, 26, 26, 0.04);
     outline: none;
   }
 
   .btn-secondary:hover {
-    background-color: var(--input);
+    background-color: var(--muted);
+    border-color: var(--input);
   }
 
   .btn-secondary:active {
@@ -289,16 +308,17 @@
     display: flex;
     align-items: center;
     gap: 10px;
-    padding: 9px 12px;
+    padding: 8px 12px;
     border-radius: 8px;
     font-size: 14px;
     font-weight: 500;
     color: var(--muted-foreground);
     cursor: pointer;
-    transition: all 150ms ease;
+    transition: background-color 150ms ease, color 150ms ease;
     text-decoration: none;
     white-space: nowrap;
     overflow: hidden;
+    position: relative;
   }
 
   .nav-item:hover {
@@ -309,10 +329,26 @@
   .nav-item.active {
     background-color: var(--secondary);
     color: var(--primary);
+    font-weight: 600;
+  }
+
+  .nav-item.active::before {
+    content: "";
+    position: absolute;
+    left: 0;
+    top: 22%;
+    bottom: 22%;
+    width: 3px;
+    border-radius: 9999px;
+    background-color: var(--primary);
+  }
+
+  .table-row-hover {
+    transition: background-color 150ms ease;
   }
 
   .table-row-hover:hover {
-    background-color: var(--muted);
+    background-color: color-mix(in srgb, var(--muted) 70%, transparent);
   }
 
   .progress-bar-track {

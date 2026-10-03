@@ -45,7 +45,7 @@ export default function CampaignHeader({ stats, pilgrims }: CampaignHeaderProps)
           </span>
           <span className="text-muted-foreground text-sm">Campaign ID: HJJ-2027-001</span>
         </div>
-        <h1 className="text-2xl font-semibold text-foreground">Hajj 2027 Campaign</h1>
+        <h1 className="text-2xl font-semibold tracking-tight text-foreground">Hajj 2027 Campaign</h1>
         <div className="flex flex-wrap items-center gap-4 mt-2">
           <span className="flex items-center gap-1.5 text-sm text-muted-foreground">
             <Calendar size={14} />
