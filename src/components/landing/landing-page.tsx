@@ -428,7 +428,17 @@ export function LandingPage() {
                 <span className="bg-border size-2.5 rounded-full" />
                 <span className="bg-border size-2.5 rounded-full" />
               </div>
-              <img src="/showcase/dashboard.png" alt={t.alts.dashboard} width={1440} height={900} className="block w-full" />
+              <video
+                src="/hero-video.mp4"
+                poster="/showcase/dashboard.png"
+                autoPlay
+                muted
+                loop
+                playsInline
+                preload="metadata"
+                aria-label={t.alts.dashboard}
+                className="block w-full"
+              />
             </figure>
           </div>
         </div>
