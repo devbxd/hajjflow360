@@ -39,3 +39,4 @@ jest-test-results.json
 
 # Optional: if using TurboRepo or monorepo
 turbo/
+.claude/
