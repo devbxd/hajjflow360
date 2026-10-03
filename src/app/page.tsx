@@ -1,6 +1,6 @@
 import React from 'react';
-import { redirect } from 'next/navigation';
 import AppLayout from '@/components/AppLayout';
+import { LandingPage } from '@/components/landing/landing-page';
 import { getCurrentUser } from '@/lib/auth/currentUser';
 import CampaignHeader from './components/CampaignHeader';
 import MetricsBentoGrid from './components/MetricsBentoGrid';
@@ -27,7 +27,7 @@ const VISA_COLORS: Record<string, string> = {
 
 export default async function CampaignDashboardPage() {
   const session = await getCurrentUser();
-  if (!session) redirect('/login');
+  if (!session) return <LandingPage />;
 
   const [pilgrims, groupLeaders, stats, registrationData, activity] = await Promise.all([
     getAllPilgrims(session.companyId),
