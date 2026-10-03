@@ -374,7 +374,7 @@ export function LandingPage() {
   const arrow = `size-4 ${isAr ? 'rotate-180' : ''}`;
 
   return (
-    <div dir={isAr ? 'rtl' : 'ltr'} lang={lang} className="bg-background text-foreground min-h-screen">
+    <div dir={isAr ? 'rtl' : 'ltr'} lang={lang} className="bg-background text-foreground min-h-screen pb-20 md:pb-0">
       <header className="sticky top-0 z-30 border-b border-white/10 bg-[#0F2F24] text-white">
         <div className="mx-auto flex h-16 max-w-7xl items-center justify-between gap-6 px-5 sm:px-8">
           <Link href="/" className="flex items-center gap-2.5">
@@ -396,16 +396,16 @@ export function LandingPage() {
               <Languages className="size-4" />
               {t.nav.switchTo}
             </button>
-            <Link href="/login" className="hidden items-center gap-2 rounded-lg border border-white/25 px-4 py-2 text-sm font-medium transition-colors hover:bg-white/10 sm:inline-flex">
+            <Link href="/login" className="inline-flex items-center gap-2 rounded-lg border border-white/25 px-3 py-2 text-sm font-medium transition-colors hover:bg-white/10 sm:px-4">
               <LogIn className="size-4" />
-              {t.nav.signIn}
+              <span>{t.nav.signIn}</span>
             </Link>
           </div>
         </div>
       </header>
 
       <section className="bg-[#0F2F24] text-white">
-        <div className="mx-auto max-w-7xl px-5 pt-16 pb-24 sm:px-8 lg:pt-24">
+        <div className="mx-auto max-w-7xl px-5 pt-12 pb-16 sm:px-8 sm:pt-16 sm:pb-24 lg:pt-24">
           <div className="grid items-center gap-14 lg:grid-cols-[1.05fr_1fr]">
             <div>
               <p className="text-sm font-semibold tracking-wide text-[#C5A028] uppercase">{t.hero.eyebrow}</p>
@@ -433,6 +433,16 @@ export function LandingPage() {
           </div>
         </div>
       </section>
+
+      <nav aria-label="Jump to a module" className="bg-[#0F2F24] pb-6 md:hidden">
+        <div className="flex gap-2 overflow-x-auto px-5 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden">
+          {MODULE_META.map((m) => (
+            <a key={m.id} href={`#${m.id}`} className="shrink-0 rounded-full border border-white/20 px-4 py-2 text-sm text-white/85 transition-colors active:bg-[#C5A028] active:text-[#0F2F24]">
+              {t.modules[m.id].eyebrow}
+            </a>
+          ))}
+        </div>
+      </nav>
 
       <section className="border-border bg-card border-y">
         <div className="bg-border mx-auto grid max-w-7xl gap-px sm:grid-cols-3">
@@ -551,6 +561,17 @@ export function LandingPage() {
           </div>
         </Reveal>
       </section>
+
+      <div className="fixed inset-x-0 bottom-0 z-40 flex gap-2 border-t border-white/10 bg-[#0F2F24]/95 p-3 backdrop-blur md:hidden">
+        <a href={whatsappHref} target="_blank" rel="noopener noreferrer" className="flex flex-1 items-center justify-center gap-2 rounded-lg bg-[#C5A028] px-4 py-3 text-sm font-semibold text-[#0F2F24]">
+          <MessageCircle className="size-4" />
+          {t.hero.whatsapp}
+        </a>
+        <Link href="/login" className="flex items-center justify-center gap-2 rounded-lg border border-white/25 px-4 py-3 text-sm font-semibold text-white">
+          <LogIn className="size-4" />
+          {t.nav.signIn}
+        </Link>
+      </div>
 
       <footer className="bg-[#0F2F24] text-white/70">
         <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-8 text-sm sm:flex-row sm:items-center sm:justify-between sm:px-8">
