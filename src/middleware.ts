@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from 'next/server';
 import { SESSION_COOKIE, verifySessionToken } from '@/lib/auth/session';
 
 // Always public, regardless of login state — a visitor should see it either way.
-const ALWAYS_PUBLIC_PATHS = ['/', '/showcase'];
+const ALWAYS_PUBLIC_PATHS = ['/', '/showcase', '/hero-video.mp4'];
 // Public only while logged out — bounces back to the app once authenticated.
 const LOGGED_OUT_ONLY_PATHS = ['/login'];
 
