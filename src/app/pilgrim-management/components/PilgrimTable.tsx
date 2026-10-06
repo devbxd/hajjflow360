@@ -16,19 +16,39 @@ import {
   Square,
   ChevronLeft,
   ChevronRight,
+  Building2,
+  ShieldCheck,
 } from 'lucide-react';
 import Link from 'next/link';
 import { toast } from 'sonner';
 import type { GroupLeader } from '@/lib/mockData';
 import EditPilgrimModal from './EditPilgrimModal';
+import AssignPilgrimModal from './AssignPilgrimModal';
+import type { HotelRow, FlightRow } from '@/lib/data/logistics';
 
 type SortField = keyof Pilgrim | null;
 type SortDir = 'asc' | 'desc';
 
 const PAGE_SIZE_OPTIONS = [10, 20, 50];
 
-export default function PilgrimTable({ initialPilgrims, groupLeaders }: { initialPilgrims: Pilgrim[]; groupLeaders: GroupLeader[] }) {
+export default function PilgrimTable({ initialPilgrims, groupLeaders, hotels, flights }: { initialPilgrims: Pilgrim[]; groupLeaders: GroupLeader[]; hotels: HotelRow[]; flights: FlightRow[] }) {
   const [pilgrimsData, setPilgrimsData] = useState<Pilgrim[]>(initialPilgrims);
+  const [assigningPilgrim, setAssigningPilgrim] = useState<Pilgrim | null>(null);
+
+  const markVisaApproved = async (p: Pilgrim) => {
+    try {
+      const res = await fetch(`/api/pilgrims/${p.id}/visa`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ status: 'approved' }),
+      });
+      if (!res.ok) throw new Error();
+      toast.success(`Visa approved for ${p.name}.`);
+      setPilgrimsData((prev) => prev.map((x) => (x.id === p.id ? { ...x, visaStatus: 'approved' } : x)));
+    } catch {
+      toast.error('Failed to update visa status.');
+    }
+  };
   const [search, setSearch] = useState('');
   const [activeFilter, setActiveFilter] = useState('all');
   const [sortField, setSortField] = useState<SortField>(null);
@@ -414,6 +434,22 @@ export default function PilgrimTable({ initialPilgrims, groupLeaders }: { initia
                           >
                             <ExternalLink size={13} />
                           </Link>
+                          {p.visaStatus !== 'approved' && (
+                            <button
+                              onClick={() => markVisaApproved(p)}
+                              className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-[#16A34A] transition-colors"
+                              title="Mark visa as approved"
+                            >
+                              <ShieldCheck size={13} />
+                            </button>
+                          )}
+                          <button
+                            onClick={() => setAssigningPilgrim(p)}
+                            className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
+                            title="Assign hotel or flight"
+                          >
+                            <Building2 size={13} />
+                          </button>
                           <button
                             onClick={() => setEditingPilgrim(p)}
                             className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-foreground transition-colors"
@@ -544,6 +580,9 @@ export default function PilgrimTable({ initialPilgrims, groupLeaders }: { initia
       )}
 
       <EditPilgrimModal pilgrim={editingPilgrim} onClose={() => setEditingPilgrim(null)} groupLeaders={groupLeaders} />
+      {assigningPilgrim && (
+        <AssignPilgrimModal pilgrim={assigningPilgrim} hotels={hotels} flights={flights} onClose={() => setAssigningPilgrim(null)} />
+      )}
     </>
   );
 }

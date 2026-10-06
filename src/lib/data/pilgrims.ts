@@ -330,3 +330,11 @@ export async function getPaymentsForPilgrim(pilgrimId: string, companyId: string
     invoiceNumber: r.invoice_number,
   }));
 }
+
+export async function setVisaStatus(id: string, status: Pilgrim['visaStatus'], companyId: string): Promise<string | null> {
+  const rows = await query<{ name: string }>(
+    'UPDATE pilgrims SET visa_status = $2 WHERE id = $1 AND company_id = $3 RETURNING name',
+    [id, status, companyId]
+  );
+  return rows.length ? rows[0].name : null;
+}
