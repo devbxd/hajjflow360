@@ -35,16 +35,17 @@ export default function PilgrimTable({ initialPilgrims, groupLeaders, hotels, fl
   const [pilgrimsData, setPilgrimsData] = useState<Pilgrim[]>(initialPilgrims);
   const [assigningPilgrim, setAssigningPilgrim] = useState<Pilgrim | null>(null);
 
-  const markVisaApproved = async (p: Pilgrim) => {
+  const toggleVisa = async (p: Pilgrim) => {
+    const next: Pilgrim['visaStatus'] = p.visaStatus === 'approved' ? 'pending' : 'approved';
     try {
       const res = await fetch(`/api/pilgrims/${p.id}/visa`, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ status: 'approved' }),
+        body: JSON.stringify({ status: next }),
       });
       if (!res.ok) throw new Error();
-      toast.success(`Visa approved for ${p.name}.`);
-      setPilgrimsData((prev) => prev.map((x) => (x.id === p.id ? { ...x, visaStatus: 'approved' } : x)));
+      toast.success(next === 'approved' ? `Visa approved for ${p.name}.` : `Visa set back to pending for ${p.name}.`);
+      setPilgrimsData((prev) => prev.map((x) => (x.id === p.id ? { ...x, visaStatus: next } : x)));
     } catch {
       toast.error('Failed to update visa status.');
     }
@@ -434,15 +435,15 @@ export default function PilgrimTable({ initialPilgrims, groupLeaders, hotels, fl
                           >
                             <ExternalLink size={13} />
                           </Link>
-                          {p.visaStatus !== 'approved' && (
-                            <button
-                              onClick={() => markVisaApproved(p)}
-                              className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-[#16A34A] transition-colors"
-                              title="Mark visa as approved"
-                            >
-                              <ShieldCheck size={13} />
-                            </button>
-                          )}
+                          <button
+                            onClick={() => toggleVisa(p)}
+                            className={`p-1.5 rounded hover:bg-muted transition-colors ${
+                              p.visaStatus === 'approved' ? 'text-[#16A34A] hover:text-muted-foreground' : 'text-muted-foreground hover:text-[#16A34A]'
+                            }`}
+                            title={p.visaStatus === 'approved' ? 'Visa approved — click to set back to pending' : 'Mark visa as approved'}
+                          >
+                            <ShieldCheck size={13} />
+                          </button>
                           <button
                             onClick={() => setAssigningPilgrim(p)}
                             className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary transition-colors"
