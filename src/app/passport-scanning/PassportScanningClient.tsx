@@ -2,53 +2,57 @@
 
 import React, { useState } from 'react';
 import Link from 'next/link';
-import { ScanLine, Loader2, CheckCircle2, ExternalLink } from 'lucide-react';
+import { ScanLine, Loader2, CheckCircle2, XCircle, ExternalLink, X, Trash2 } from 'lucide-react';
 import { toast } from 'sonner';
 import type { GroupLeader } from '@/lib/mockData';
 import { parsePassportMrz } from '@/lib/ocr/parseMrz';
 
-interface ScannedEntry {
-  id: string;
-  name: string;
-  passportNumber: string;
+type QueueStatus = 'pending' | 'scanning' | 'done' | 'error';
+
+interface QueueItem {
+  key: string;
+  file: File;
+  previewUrl: string;
+  status: QueueStatus;
+  name?: string;
+  passportNumber?: string;
+  pilgrimId?: string;
+  error?: string;
 }
 
 export default function PassportScanningClient({ groupLeaders }: { groupLeaders: GroupLeader[] }) {
   const [groupId, setGroupId] = useState(groupLeaders[0]?.groupId ?? '');
-  const [ocrFile, setOcrFile] = useState<File | null>(null);
-  const [ocrPreviewUrl, setOcrPreviewUrl] = useState<string | null>(null);
+  const [queue, setQueue] = useState<QueueItem[]>([]);
   const [scanning, setScanning] = useState(false);
-  const [recent, setRecent] = useState<ScannedEntry[]>([]);
 
-  const handleFileChange = (file: File | null) => {
-    setOcrFile(file);
-    setOcrPreviewUrl(file ? URL.createObjectURL(file) : null);
+  const addFiles = (files: FileList | null) => {
+    if (!files || files.length === 0) return;
+    const items: QueueItem[] = Array.from(files).map((file) => ({
+      key: `${file.name}-${file.size}-${file.lastModified}-${Math.random().toString(36).slice(2)}`,
+      file,
+      previewUrl: URL.createObjectURL(file),
+      status: 'pending',
+    }));
+    setQueue((prev) => [...prev, ...items]);
   };
 
-  const resetFile = () => {
-    setOcrFile(null);
-    setOcrPreviewUrl(null);
+  const removeItem = (key: string) => {
+    setQueue((prev) => prev.filter((item) => item.key !== key));
   };
 
-  const handleScan = async () => {
-    if (!ocrFile) {
-      toast.error('Select a passport photo first.');
-      return;
-    }
-    if (!groupId) {
-      toast.error('No group available — create a group leader first.');
-      return;
-    }
-    setScanning(true);
+  const clearFinished = () => {
+    setQueue((prev) => prev.filter((item) => item.status === 'pending' || item.status === 'scanning'));
+  };
+
+  const scanOne = async (item: QueueItem): Promise<Partial<QueueItem>> => {
     try {
       const { default: Tesseract } = await import('tesseract.js');
-      const result = await Tesseract.recognize(ocrFile, 'eng');
+      const result = await Tesseract.recognize(item.file, 'eng');
       const parsed = parsePassportMrz(result.data.text);
       const fullName = [parsed.givenNames, parsed.surname].filter(Boolean).join(' ').trim();
 
       if (!fullName || !parsed.passportNumber) {
-        toast.error("Couldn't read the MRZ strip clearly. Try a sharper photo, or add this pilgrim manually from Pilgrim Management.");
-        return;
+        return { status: 'error', error: "Couldn't read the MRZ strip clearly." };
       }
 
       const res = await fetch('/api/pilgrims/scan', {
@@ -65,17 +69,46 @@ export default function PassportScanningClient({ groupLeaders }: { groupLeaders:
         }),
       });
       const data = await res.json();
-      if (!res.ok) throw new Error(data.error ?? 'Failed to save pilgrim');
+      if (!res.ok) return { status: 'error', error: data.error ?? 'Failed to save pilgrim' };
 
-      toast.success(`${fullName} auto-registered as ${data.id}. Add phone/email from their profile when you get a chance.`);
-      setRecent((prev) => [{ id: data.id, name: fullName, passportNumber: parsed.passportNumber! }, ...prev]);
-      resetFile();
+      return { status: 'done', name: fullName, passportNumber: parsed.passportNumber, pilgrimId: data.id };
     } catch (err) {
-      toast.error(err instanceof Error ? err.message : 'Scan failed.');
-    } finally {
-      setScanning(false);
+      return { status: 'error', error: err instanceof Error ? err.message : 'Scan failed.' };
     }
   };
+
+  const handleScanAll = async () => {
+    if (!groupId) {
+      toast.error('No group available — create a group leader first.');
+      return;
+    }
+    const pending = queue.filter((item) => item.status === 'pending');
+    if (pending.length === 0) {
+      toast.error('Add at least one passport photo first.');
+      return;
+    }
+
+    setScanning(true);
+    let succeeded = 0;
+    let failed = 0;
+
+    // Scanned one at a time: Tesseract is CPU-heavy, and running several at
+    // once in the browser would make every scan slower instead of faster.
+    for (const item of pending) {
+      setQueue((prev) => prev.map((q) => (q.key === item.key ? { ...q, status: 'scanning' } : q)));
+      const outcome = await scanOne(item);
+      if (outcome.status === 'done') succeeded += 1;
+      else failed += 1;
+      setQueue((prev) => prev.map((q) => (q.key === item.key ? { ...q, ...outcome } as QueueItem : q)));
+    }
+
+    setScanning(false);
+    if (succeeded > 0) toast.success(`${succeeded} pilgrim${succeeded > 1 ? 's' : ''} registered.`);
+    if (failed > 0) toast.error(`${failed} passport${failed > 1 ? 's' : ''} could not be read. Add them manually if needed.`);
+  };
+
+  const pendingCount = queue.filter((item) => item.status === 'pending').length;
+  const hasFinished = queue.some((item) => item.status === 'done' || item.status === 'error');
 
   return (
     <div>
@@ -87,7 +120,7 @@ export default function PassportScanningClient({ groupLeaders }: { groupLeaders:
           <div>
             <h1 className="text-2xl font-semibold text-foreground">Passport Scanning</h1>
             <p className="text-sm text-muted-foreground mt-1">
-              Scan a passport and the pilgrim is registered automatically — no extra clicks. Fill in contact details later.
+              Scan one passport or a whole batch — each pilgrim is registered automatically. Fill in contact details later.
             </p>
           </div>
         </div>
@@ -110,27 +143,72 @@ export default function PassportScanningClient({ groupLeaders }: { groupLeaders:
             className="border-2 border-dashed border-border rounded-xl p-8 text-center hover:border-primary/40 transition-colors cursor-pointer bg-muted/30"
             onClick={() => document.getElementById('scan-file-input')?.click()}
           >
-            {ocrPreviewUrl ? (
-              <img src={ocrPreviewUrl} alt="Passport preview" className="max-h-48 mx-auto rounded mb-2" />
-            ) : (
-              <ScanLine size={36} className="text-muted-foreground mx-auto mb-2" />
-            )}
-            <p className="text-sm font-medium text-foreground">{ocrFile ? ocrFile.name : 'Drop passport image here or click to browse'}</p>
-            <p className="text-xs text-muted-foreground mt-1">JPG or PNG — max 10MB · runs entirely in your browser</p>
+            <ScanLine size={32} className="text-muted-foreground mx-auto mb-2" />
+            <p className="text-sm font-medium text-foreground">Drop passport photos here or click to browse</p>
+            <p className="text-xs text-muted-foreground mt-1">JPG or PNG, one or several at once — runs entirely in your browser</p>
             <input
               id="scan-file-input"
               type="file"
               accept="image/*"
+              multiple
               className="hidden"
-              onChange={(e) => handleFileChange(e.target.files?.[0] ?? null)}
+              onChange={(e) => {
+                addFiles(e.target.files);
+                e.target.value = '';
+              }}
             />
           </div>
 
+          {queue.length > 0 && (
+            <div className="mt-4 space-y-2">
+              <div className="flex items-center justify-between">
+                <h3 className="text-sm font-semibold text-foreground">Queue ({queue.length})</h3>
+                {hasFinished && (
+                  <button onClick={clearFinished} className="text-xs text-muted-foreground hover:text-foreground flex items-center gap-1">
+                    <Trash2 size={12} />
+                    Clear finished
+                  </button>
+                )}
+              </div>
+              <ul className="space-y-1.5 max-h-72 overflow-y-auto scrollbar-thin">
+                {queue.map((item) => (
+                  <li key={item.key} className="flex items-center gap-3 px-3 py-2 rounded-lg bg-muted/30 border border-border">
+                    <img src={item.previewUrl} alt="" className="w-10 h-10 rounded object-cover flex-shrink-0" />
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-foreground truncate">{item.name ?? item.file.name}</p>
+                      {item.status === 'error' && <p className="text-xs text-[#DC2626] truncate">{item.error}</p>}
+                      {item.status === 'done' && (
+                        <p className="text-xs font-mono-data text-muted-foreground truncate">{item.pilgrimId} · {item.passportNumber}</p>
+                      )}
+                      {item.status === 'pending' && <p className="text-xs text-muted-foreground">Waiting to scan</p>}
+                      {item.status === 'scanning' && <p className="text-xs text-primary">Reading…</p>}
+                    </div>
+                    <div className="flex-shrink-0 flex items-center gap-1">
+                      {item.status === 'scanning' && <Loader2 size={15} className="animate-spin text-primary" />}
+                      {item.status === 'done' && <CheckCircle2 size={15} className="text-[#16A34A]" />}
+                      {item.status === 'error' && <XCircle size={15} className="text-[#DC2626]" />}
+                      {item.status === 'done' && item.pilgrimId && (
+                        <Link href={`/pilgrim-profile/${item.pilgrimId}`} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-primary" title="Complete profile">
+                          <ExternalLink size={13} />
+                        </Link>
+                      )}
+                      {item.status === 'pending' && (
+                        <button onClick={() => removeItem(item.key)} className="p-1 rounded hover:bg-muted text-muted-foreground hover:text-[#DC2626]" title="Remove">
+                          <X size={13} />
+                        </button>
+                      )}
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            </div>
+          )}
+
           <button
-            onClick={handleScan}
-            disabled={scanning || !ocrFile || !groupId}
+            onClick={handleScanAll}
+            disabled={scanning || pendingCount === 0 || !groupId}
             className="btn-primary w-full justify-center mt-4"
-            style={{ opacity: scanning || !ocrFile || !groupId ? 0.6 : 1 }}
+            style={{ opacity: scanning || pendingCount === 0 || !groupId ? 0.6 : 1 }}
           >
             {scanning ? (
               <>
@@ -140,7 +218,7 @@ export default function PassportScanningClient({ groupLeaders }: { groupLeaders:
             ) : (
               <>
                 <ScanLine size={14} />
-                Scan &amp; Register Automatically
+                {pendingCount > 1 ? `Scan & Register ${pendingCount} Passports` : 'Scan & Register Automatically'}
               </>
             )}
           </button>
@@ -148,24 +226,26 @@ export default function PassportScanningClient({ groupLeaders }: { groupLeaders:
 
         <div className="card-base">
           <h3 className="text-sm font-semibold text-foreground mb-3">Just scanned</h3>
-          {recent.length === 0 ? (
+          {!hasFinished ? (
             <p className="text-xs text-muted-foreground">Scanned pilgrims from this session will appear here.</p>
           ) : (
             <ul className="space-y-2">
-              {recent.map((r) => (
-                <li key={r.id} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-muted/30 border border-border">
-                  <div className="min-w-0">
-                    <p className="text-sm font-medium text-foreground truncate flex items-center gap-1.5">
-                      <CheckCircle2 size={13} className="text-[#16A34A] flex-shrink-0" />
-                      {r.name}
-                    </p>
-                    <p className="text-xs font-mono-data text-muted-foreground">{r.id} · {r.passportNumber}</p>
-                  </div>
-                  <Link href={`/pilgrim-profile/${r.id}`} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary flex-shrink-0" title="Complete profile">
-                    <ExternalLink size={14} />
-                  </Link>
-                </li>
-              ))}
+              {queue
+                .filter((item) => item.status === 'done')
+                .map((item) => (
+                  <li key={item.key} className="flex items-center justify-between gap-2 px-3 py-2 rounded-lg bg-muted/30 border border-border">
+                    <div className="min-w-0">
+                      <p className="text-sm font-medium text-foreground truncate flex items-center gap-1.5">
+                        <CheckCircle2 size={13} className="text-[#16A34A] flex-shrink-0" />
+                        {item.name}
+                      </p>
+                      <p className="text-xs font-mono-data text-muted-foreground">{item.pilgrimId} · {item.passportNumber}</p>
+                    </div>
+                    <Link href={`/pilgrim-profile/${item.pilgrimId}`} className="p-1.5 rounded hover:bg-muted text-muted-foreground hover:text-primary flex-shrink-0" title="Complete profile">
+                      <ExternalLink size={14} />
+                    </Link>
+                  </li>
+                ))}
             </ul>
           )}
         </div>

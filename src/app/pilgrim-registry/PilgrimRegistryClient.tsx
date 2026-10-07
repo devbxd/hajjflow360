@@ -4,6 +4,48 @@ import React, { useMemo, useState } from 'react';
 import { BookOpen, Search, Printer, Download } from 'lucide-react';
 import type { Pilgrim } from '@/lib/mockData';
 
+type ValidityStatus = 'expired' | 'expiring' | 'valid' | 'unknown';
+
+const RENEWAL_WINDOW_DAYS = 180;
+
+// Dates are stored as DD/MM/YYYY strings throughout the app (see ageFromDob
+// in lib/data/pilgrims.ts), so expiry is classified from that same format.
+function classifyPassportValidity(passportExpiry: string): { status: ValidityStatus; days: number | null } {
+  const match = /^(\d{2})\/(\d{2})\/(\d{4})$/.exec(passportExpiry ?? '');
+  if (!match) return { status: 'unknown', days: null };
+  const [, day, month, year] = match;
+  const expiry = new Date(Number(year), Number(month) - 1, Number(day));
+  if (Number.isNaN(expiry.getTime())) return { status: 'unknown', days: null };
+  const days = Math.round((expiry.getTime() - Date.now()) / 86400000);
+  if (days < 0) return { status: 'expired', days };
+  if (days < RENEWAL_WINDOW_DAYS) return { status: 'expiring', days };
+  return { status: 'valid', days };
+}
+
+const VALIDITY_LABEL: Record<ValidityStatus, string> = {
+  expired: 'Expired',
+  expiring: 'Expiring soon',
+  valid: 'Valid',
+  unknown: 'Unknown',
+};
+
+const VALIDITY_CLASS: Record<ValidityStatus, string> = {
+  expired: 'bg-[#FEF2F2] text-[#DC2626]',
+  expiring: 'bg-[#FFFBEB] text-[#B45309]',
+  valid: 'bg-[#F0FDF4] text-[#16A34A]',
+  unknown: 'bg-muted text-muted-foreground',
+};
+
+function PassportValidityBadge({ passportExpiry }: { passportExpiry: string }) {
+  const { status } = classifyPassportValidity(passportExpiry);
+  return (
+    <span className={`inline-flex items-center gap-1 px-2 py-0.5 rounded-full text-xs font-medium whitespace-nowrap ${VALIDITY_CLASS[status]}`}>
+      {VALIDITY_LABEL[status]}
+      {passportExpiry ? ` · ${passportExpiry}` : ''}
+    </span>
+  );
+}
+
 export default function PilgrimRegistryClient({ pilgrims }: { pilgrims: Pilgrim[] }) {
   const [search, setSearch] = useState('');
 
@@ -24,8 +66,8 @@ export default function PilgrimRegistryClient({ pilgrims }: { pilgrims: Pilgrim[
 
   const handleExport = () => {
     const csvRows = [
-      ['Pilgrim ID', 'Full Name', 'Nationality', 'Passport Number', 'Passport Expiry', 'Date of Birth', 'Gender', 'Group ID', 'Registered On'],
-      ...filtered.map((p) => [p.id, p.name, p.nationality, p.passportNumber, p.passportExpiry, p.dateOfBirth, p.gender, p.groupId, p.registeredAt]),
+      ['Pilgrim ID', 'Full Name', 'Nationality', 'Passport Number', 'Passport Expiry', 'Passport Validity', 'Date of Birth', 'Gender', 'Group ID', 'Registered On'],
+      ...filtered.map((p) => [p.id, p.name, p.nationality, p.passportNumber, p.passportExpiry, VALIDITY_LABEL[classifyPassportValidity(p.passportExpiry).status], p.dateOfBirth, p.gender, p.groupId, p.registeredAt]),
     ];
     const csv = csvRows.map((r) => r.map((cell) => `"${String(cell).replace(/"/g, '""')}"`).join(',')).join('\n');
     const blob = new Blob([csv], { type: 'text/csv' });
@@ -81,7 +123,7 @@ export default function PilgrimRegistryClient({ pilgrims }: { pilgrims: Pilgrim[
           <table className="w-full text-sm min-w-[900px]">
             <thead>
               <tr className="border-b border-border bg-muted/30 print:bg-transparent">
-                {['#', 'Pilgrim ID', 'Full Name', 'Nationality', 'Passport #', 'Date of Birth', 'Gender', 'Group', 'Registered'].map((h) => (
+                {['#', 'Pilgrim ID', 'Full Name', 'Nationality', 'Passport #', 'Passport Validity', 'Date of Birth', 'Gender', 'Group', 'Registered'].map((h) => (
                   <th key={h} className="text-left py-2.5 px-3 text-xs font-medium text-muted-foreground uppercase tracking-wide whitespace-nowrap">
                     {h}
                   </th>
@@ -91,7 +133,7 @@ export default function PilgrimRegistryClient({ pilgrims }: { pilgrims: Pilgrim[
             <tbody>
               {filtered.length === 0 ? (
                 <tr>
-                  <td colSpan={9} className="py-12 text-center text-sm text-muted-foreground">
+                  <td colSpan={10} className="py-12 text-center text-sm text-muted-foreground">
                     No pilgrims match this search.
                   </td>
                 </tr>
@@ -103,6 +145,7 @@ export default function PilgrimRegistryClient({ pilgrims }: { pilgrims: Pilgrim[
                     <td className="py-2 px-3 font-medium text-foreground">{p.name}</td>
                     <td className="py-2 px-3 text-muted-foreground whitespace-nowrap">{p.nationality}</td>
                     <td className="py-2 px-3 font-mono-data text-xs text-foreground">{p.passportNumber}</td>
+                    <td className="py-2 px-3"><PassportValidityBadge passportExpiry={p.passportExpiry} /></td>
                     <td className="py-2 px-3 text-xs text-muted-foreground whitespace-nowrap">{p.dateOfBirth}</td>
                     <td className="py-2 px-3 text-xs text-muted-foreground">{p.gender}</td>
                     <td className="py-2 px-3 font-mono-data text-xs text-muted-foreground">{p.groupId}</td>
